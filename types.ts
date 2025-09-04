@@ -1,0 +1,29 @@
+export interface SyncedLine {
+  id: string;
+  text: string;
+  begin: number | null;
+  end: number | null;
+}
+
+export enum Tab {
+  Audio = 'audio',
+  Text = 'text',
+  Sync = 'sync',
+  Result = 'result',
+  Player = 'player',
+  Admin = 'admin',
+}
+
+export type IssueType = 'doubleSpaces' | 'capitalization' | 'trim' | 'punctuation' | 'symbols' | 'emptyLines' | 'startEmpty' | 'endEmpty' | 'tags';
+
+export interface AnalysisIssue {
+  type: IssueType;
+  lineIndex: number;
+  lineId: string;
+  text: string;
+  message: string;
+}
+
+export interface AnalysisResult {
+  [key: string]: AnalysisIssue[];
+}
