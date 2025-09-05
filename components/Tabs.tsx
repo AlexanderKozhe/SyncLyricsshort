@@ -5,6 +5,7 @@ interface TabsProps {
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
   isTabDisabled: (tab: Tab) => boolean;
+  isAdmin: boolean;
 }
 
 const tabConfig: { id: Tab; label: string }[] = [
@@ -16,11 +17,18 @@ const tabConfig: { id: Tab; label: string }[] = [
   { id: Tab.Admin, label: 'Админ' },
 ];
 
-const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, isTabDisabled }) => {
+const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, isTabDisabled, isAdmin }) => {
+  const visibleTabs = tabConfig.filter(tab => {
+    if (tab.id === Tab.Admin) {
+      return isAdmin;
+    }
+    return true;
+  });
+
   return (
     <div className="border-b border-slate-700/50 px-6 md:px-8 py-2">
       <nav className="p-1.5 inline-flex items-center gap-2 bg-slate-800 rounded-xl" aria-label="Tabs">
-        {tabConfig.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isDisabled = isTabDisabled(tab.id);
           const isActive = activeTab === tab.id;
           

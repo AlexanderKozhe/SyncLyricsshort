@@ -2,6 +2,7 @@
 // This is likely needed if the project uses an older version of the Firebase SDK.
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
+import "firebase/compat/firestore"; // Added this line to include Firestore
 
 // FIX: Add global type declarations for import.meta.env to address TypeScript errors.
 // This is necessary because the project's global type definitions for Vite
@@ -36,3 +37,4 @@ const firebaseConfig = {
 // FIX: Use v8-style initialization with the compat library.
 const app = firebase.initializeApp(firebaseConfig);
 export const auth = firebase.auth();
+export const db = firebase.firestore(); // Added this line to export the db instance

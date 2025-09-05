@@ -5,21 +5,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Импортируем официальный SDK от Google
-// Возможно, его нужно будет добавить в зависимости: npm install @google/generative-ai
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Безопасно получаем API ключ из переменных окружения Vercel.
-// Важно: эта переменная НЕ должна иметь префикс VITE_
 const apiKey = process.env.GEMINI_API_KEY;
 
-// Проверяем, что ключ вообще существует.
 if (!apiKey) {
-  // Эта ошибка будет видна только в логах сервера Vercel, не пользователю.
   throw new Error("Переменная окружения GEMINI_API_KEY не установлена");
 }
 
 const genAI = new GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+
+// ИСПРАВЛЕНО: Используем современную и быструю модель
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest"});
 
 // Основная функция-обработчик
 export default async function handler(
@@ -36,7 +34,6 @@ export default async function handler(
     // Получаем `prompt` из тела запроса, который прислал фронтенд
     const { prompt } = req.body;
 
-    // Если фронтенд не прислал prompt, возвращаем ошибку
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
@@ -49,9 +46,17 @@ export default async function handler(
     // Отправляем успешный ответ обратно на фронтенд
     return res.status(200).json({ text });
 
-  } catch (error) {
-    // Если что-то пошло не так при обращении к Gemini
+  } catch (error: any) {
+    // Улучшаем логирование ошибок
     console.error('Ошибка при вызове Gemini API:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    
+    // Возвращаем более детальную информацию об ошибке, если она доступна
+    const errorMessage = error.message || 'Internal Server Error';
+    const errorStatus = error.status || 500;
+    
+    return res.status(errorStatus).json({ 
+      error: 'Ошибка на стороне сервера при вызове Gemini API',
+      details: errorMessage
+    });
   }
 }

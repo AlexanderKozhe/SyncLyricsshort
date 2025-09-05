@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+import AdminUsers from './AdminUsers';
+import WandIcon from './icons/WandIcon';
 import CopyIcon from './icons/CopyIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import { toTTML, formatLRCTime } from '../services/formatter';
 import { SyncedLine } from '../types';
+
+// --- Individual Converter Components ---
 
 const MusixmatchConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [lrcInput, setLrcInput] = useState('');
@@ -12,9 +16,9 @@ const MusixmatchConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [copied, setCopied] = useState(false);
 
     const parseLRC = (lrc: string): { time: number; text: string }[] => {
-        const lines = lrc.split('\n');
+        const lines = lrc.split('\\n');
         const result: { time: number; text: string }[] = [];
-        const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+        const regex = /\\\[(\d{2}):(\d{2})\\.(\d{2,3})\\\](.*)/;
 
         for (const line of lines) {
             const match = line.match(regex);
@@ -26,7 +30,6 @@ const MusixmatchConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 
                 const totalSeconds = minutes * 60 + seconds + centiseconds / (match[3].length === 2 ? 100 : 1000);
 
-                // Ignore lines that are just instrumental markers for conversion purposes
                 if (text && text.toUpperCase() !== '#INSTRUMENTAL' && text.toUpperCase() !== 'END') {
                     result.push({ time: parseFloat(totalSeconds.toFixed(3)), text });
                 }
@@ -55,7 +58,6 @@ const MusixmatchConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
             for (const subtitle of newDraft.subtitles) {
                 const text = (subtitle.text || '').trim();
-                // Match lines that have text content, are not the starting '...', and not 'END' or '#INSTRUMENTAL'
                 if (text && text !== '...' && text.toUpperCase() !== 'END' && text.toUpperCase() !== '#INSTRUMENTAL') {
                     draftTextLines++;
                     if (lrcIndex < lrcData.length) {
@@ -97,7 +99,7 @@ const MusixmatchConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
 
     return (
-         <div className="h-full flex flex-col p-6 gap-6">
+         <div className="h-full flex flex-col p-6 gap-6 bg-slate-800 rounded-lg">
             <div className="flex-shrink-0 flex items-center gap-4">
                  <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-700">&larr; Назад</button>
                 <div>
@@ -173,9 +175,9 @@ const LrcToTtmlConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [copied, setCopied] = useState(false);
 
     const parseLrcToSyncedLines = (lrc: string): SyncedLine[] => {
-        const lines = lrc.split('\n');
+        const lines = lrc.split('\\n');
         const timedLines: { time: number; text: string }[] = [];
-        const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+        const regex = /\\\[(\d{2}):(\d{2})\\.(\d{2,3})\\\](.*)/;
 
         for (const line of lines) {
             const match = line.match(regex);
@@ -249,7 +251,7 @@ const LrcToTtmlConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 gap-6">
+        <div className="h-full flex flex-col p-6 gap-6 bg-slate-800 rounded-lg">
             <div className="flex-shrink-0 flex items-center gap-4">
                  <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-700">&larr; Назад</button>
                 <div>
@@ -328,7 +330,7 @@ const DraftToLrcConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 throw new Error("В JSON не найдено строк для конвертации.");
             }
 
-            setLrcOutput(lrcLines.join('\n'));
+            setLrcOutput(lrcLines.join('\\n'));
 
         } catch (e) {
             setError(`Ошибка конвертации: ${e instanceof Error ? e.message : 'Неизвестная ошибка.'}`);
@@ -356,7 +358,7 @@ const DraftToLrcConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 gap-6">
+        <div className="h-full flex flex-col p-6 gap-6 bg-slate-800 rounded-lg">
             <div className="flex-shrink-0 flex items-center gap-4">
                  <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-700">&larr; Назад</button>
                 <div>
@@ -412,10 +414,30 @@ const DraftToLrcConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     )
 };
 
+// --- Main Admin View Component ---
+
 type Tool = 'musixmatch' | 'lrc2ttml' | 'draft2lrc';
 
 const AdminView: React.FC = () => {
     const [activeTool, setActiveTool] = useState<Tool | null>(null);
+
+    const tools = [
+        { 
+          id: 'musixmatch',
+          title: 'Musixmatch (LRC → Draft JSON)',
+          description: 'Объединяет таймкоды из LRC с JSON-черновиком Musixmatch.',
+        },
+        { 
+          id: 'draft2lrc',
+          title: 'Musixmatch (Draft JSON → LRC)',
+          description: 'Конвертирует JSON-черновик Musixmatch в стандартный LRC-файл.',
+        },
+        { 
+          id: 'lrc2ttml',
+          title: 'LRC → TTML Конвертер',
+          description: 'Конвертирует стандартный LRC-файл в формат TTML.',
+        },
+    ];
 
     const renderContent = () => {
         switch (activeTool) {
@@ -427,41 +449,45 @@ const AdminView: React.FC = () => {
                 return <DraftToLrcConverter onBack={() => setActiveTool(null)} />;
             default:
                 return (
-                    <div className="p-6">
-                        <h2 className="text-xl font-semibold mb-1 text-slate-200">Инструменты</h2>
-                        <p className="text-slate-400 mb-6">Выберите инструмент для работы.</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <button 
-                                onClick={() => setActiveTool('musixmatch')}
-                                className="p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-left transition-colors"
-                            >
-                                <h3 className="font-semibold text-sky-400 mb-1">Musixmatch (LRC → Draft JSON)</h3>
-                                <p className="text-sm text-slate-300">Объединяет таймкоды из LRC с JSON-черновиком Musixmatch.</p>
-                            </button>
-                            <button
-                                onClick={() => setActiveTool('draft2lrc')}
-                                className="p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-left transition-colors"
-                            >
-                                <h3 className="font-semibold text-sky-400 mb-1">Musixmatch (Draft JSON → LRC)</h3>
-                                <p className="text-sm text-slate-300">Конвертирует JSON-черновик Musixmatch в стандартный LRC-файл.</p>
-                            </button>
-                            <button
-                                onClick={() => setActiveTool('lrc2ttml')}
-                                className="p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-left transition-colors"
-                            >
-                                <h3 className="font-semibold text-sky-400 mb-1">LRC → TTML Конвертер</h3>
-                                <p className="text-sm text-slate-300">Конвертирует стандартный LRC-файл в формат TTML.</p>
-                            </button>
-                            {/* New tools can be added here */}
+                    <>
+                        {/* Инструменты */}
+                        <div className="mb-12">
+                            <h3 className="text-xl font-semibold text-white mb-4">Инструменты</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {tools.map((tool) => (
+                                <div 
+                                    key={tool.id} 
+                                    onClick={() => setActiveTool(tool.id as Tool)}
+                                    className="bg-slate-800 rounded-lg shadow-lg p-6 flex flex-col hover:bg-slate-700/50 transition-all duration-200 cursor-pointer border border-transparent hover:border-sky-500"
+                                >
+                                    <div className="flex items-center mb-4">
+                                        <div className="bg-sky-500/20 text-sky-400 p-3 rounded-lg mr-4">
+                                            <WandIcon className="w-6 h-6" />
+                                        </div>
+                                        <h4 className="text-lg font-bold text-white">{tool.title}</h4>
+                                    </div>
+                                    <p className="text-slate-400 text-sm flex-grow">{tool.description}</p>
+                                </div>
+                            ))}
+                            </div>
                         </div>
-                    </div>
+
+                        {/* Управление пользователями */}
+                        <div>
+                            <h3 className="text-xl font-semibold text-white mb-4">Управление пользователями</h3>
+                            <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-800 shadow-lg">
+                            <AdminUsers />
+                            </div>
+                        </div>
+                    </>
                 );
         }
     }
     
     return (
-        <div className="h-full flex flex-col bg-slate-800 rounded-lg">
-           {renderContent()}
+        <div className="h-full p-4 sm:p-6 lg:p-8">
+            {activeTool === null && <h2 className="text-3xl font-bold text-white mb-8">Панель администратора</h2>}
+            {renderContent()}
         </div>
     );
 };

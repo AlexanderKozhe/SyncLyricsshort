@@ -1,4 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { getAuth } from 'firebase/auth';
+import { db } from './firebase'; // Import db from your firebase config
 import { Tab, SyncedLine, IssueType } from './types';
 import Tabs from './components/Tabs';
 import AudioUpload from './components/AudioUpload';
@@ -14,9 +16,8 @@ import AdminView from './components/AdminView';
 
 const DRAFT_KEY = 'zion_sync_draft';
 
-// FIX: Add props interface for user and onLogout from AuthGate to resolve type error.
 interface AppProps {
-  user?: { email: string | null };
+  user?: { uid: string, email: string | null };
   onLogout?: () => void;
 }
 
@@ -32,11 +33,36 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
   const [draftAudioName, setDraftAudioName] = useState('');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [noAudioMode, setNoAudioMode] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const textEditorRef = useRef<{ scrollToLine: (index: number) => void }>(null);
   
   const hasLoaded = useRef(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        const userDoc = await userDocRef.get();
+
+        if (userDoc.exists && userDoc.data()?.role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        setIsAdmin(false); // Default to non-admin on error
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   useEffect(() => {
     if (hasLoaded.current) return;
@@ -178,7 +204,8 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
   }, [lines]);
 
   const isTabDisabled = useCallback((tab: Tab) => {
-    if (tab === Tab.Audio || tab === Tab.Admin) return false;
+    if (tab === Tab.Audio) return false;
+    if (tab === Tab.Admin) return !isAdmin;
 
     // A source is either loaded audio, a draft, or explicit no-audio mode.
     const hasSource = !!audioUrl || showDraftNotice || noAudioMode;
@@ -199,7 +226,7 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
     if (tab === Tab.Player && !allLinesSynced) return true;
 
     return false;
-  }, [audioUrl, lines, showDraftNotice, allLinesSynced, noAudioMode]);
+  }, [audioUrl, lines, showDraftNotice, allLinesSynced, noAudioMode, isAdmin]);
   
   const handleGoToIssue = (lineIndex: number) => {
     setScrollToLineIndex(lineIndex);
@@ -253,7 +280,6 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-900 text-slate-200 font-sans overflow-hidden">
-      {/* FIX: Update header to show user info and logout button if available. */}
       <header className="py-4 px-6 bg-slate-800/70 backdrop-blur-sm border-b border-slate-700/50 shadow-md flex-shrink-0 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Zion Distribution</h1>
@@ -275,7 +301,7 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
 
       <main className="flex-grow flex flex-col overflow-hidden">
         <div className="flex justify-between items-center">
-            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} isTabDisabled={isTabDisabled} />
+            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} isTabDisabled={isTabDisabled} isAdmin={isAdmin} />
              <div className="px-6">
                 <button 
                   onClick={() => setIsResetModalOpen(true)}

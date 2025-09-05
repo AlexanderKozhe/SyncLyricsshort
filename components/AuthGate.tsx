@@ -38,7 +38,8 @@ const AuthGate: React.FC = () => {
   }
 
   if (user) {
-    return <App user={{ email: user.email }} onLogout={handleLogout} />;
+    // ***** THE FIX IS HERE *****
+    return <App user={{ uid: user.uid, email: user.email }} onLogout={handleLogout} />;
   }
 
   return <LoginPage />;
