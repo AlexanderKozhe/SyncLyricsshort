@@ -11,7 +11,6 @@ export enum Tab {
   Sync = 'sync',
   Result = 'result',
   Player = 'player',
-  Admin = 'admin',
 }
 
 export type IssueType = 'doubleSpaces' | 'capitalization' | 'trim' | 'punctuation' | 'symbols' | 'emptyLines' | 'startEmpty' | 'endEmpty' | 'tags';
