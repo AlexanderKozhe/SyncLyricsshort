@@ -1,6 +1,9 @@
 
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+
+// FIX: Module '"firebase/app"' has no exported member 'initializeApp'. Use namespaced import for Firebase v8 SDK.
+import firebase from "firebase/app";
+// FIX: Module '"firebase/auth"' has no exported member 'getAuth'. Import "firebase/auth" for side effects.
+import "firebase/auth";
 
 // IMPORTANT: Your web app's Firebase configuration
 // These should be set as environment variables in your Vercel project.
@@ -16,5 +19,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+export const auth = firebase.auth();

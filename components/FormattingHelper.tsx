@@ -92,8 +92,8 @@ const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onG
     setIsAiLoading(true);
     setAiError(null);
     try {
-        // FIX: Use `process.env.API_KEY` as per the coding guidelines.
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+        // In a Vite project, environment variables must be prefixed with VITE_ to be exposed to the client.
+        const ai = new GoogleGenAI({ apiKey: process.env.VITE_API_KEY! });
         const fullText = lines.map(line => line.text).join('\n');
         
         const response = await ai.models.generateContent({
