@@ -13,7 +13,9 @@
     "types": [
       "node"
     ],
-    "moduleResolution": "bundler",
+    // ИЗМЕНЕНО: bundler -> node для лучшей совместимости с Vercel
+    "moduleResolution": "node", 
+    "allowSyntheticDefaultImports": true, // ДОБАВЛЕНО: для совместимости модулей
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
@@ -25,5 +27,8 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  // ДОБАВЛЕНО: Явное указание, какие папки включать в компиляцию,
+  // чтобы `api` папка точно была обработана.
+  "include": ["src", "components", "services", "types", "api"]
 }
