@@ -92,6 +92,7 @@ const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onG
     setIsAiLoading(true);
     setAiError(null);
     try {
+        // FIX: Use `process.env.API_KEY` as per the coding guidelines.
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
         const fullText = lines.map(line => line.text).join('\n');
         

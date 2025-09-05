@@ -412,7 +412,6 @@ const DraftToLrcConverter: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     )
 };
 
-
 type Tool = 'musixmatch' | 'lrc2ttml' | 'draft2lrc';
 
 const AdminView: React.FC = () => {
@@ -436,14 +435,14 @@ const AdminView: React.FC = () => {
                                 onClick={() => setActiveTool('musixmatch')}
                                 className="p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-left transition-colors"
                             >
-                                <h3 className="font-semibold text-sky-400 mb-1">Musixmatch конвертер (LRC → Draft JSON)</h3>
-                                <p className="text-sm text-slate-300">Объединяет таймкоды из LRC-файла с JSON-черновиком Musixmatch.</p>
+                                <h3 className="font-semibold text-sky-400 mb-1">Musixmatch (LRC → Draft JSON)</h3>
+                                <p className="text-sm text-slate-300">Объединяет таймкоды из LRC с JSON-черновиком Musixmatch.</p>
                             </button>
                             <button
                                 onClick={() => setActiveTool('draft2lrc')}
                                 className="p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-left transition-colors"
                             >
-                                <h3 className="font-semibold text-sky-400 mb-1">Musixmatch конвертер (Draft JSON → LRC)</h3>
+                                <h3 className="font-semibold text-sky-400 mb-1">Musixmatch (Draft JSON → LRC)</h3>
                                 <p className="text-sm text-slate-300">Конвертирует JSON-черновик Musixmatch в стандартный LRC-файл.</p>
                             </button>
                             <button
