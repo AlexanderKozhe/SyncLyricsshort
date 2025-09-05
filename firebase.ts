@@ -1,6 +1,6 @@
-// FIX: Updated Firebase imports to use the v8 namespaced API syntax.
-import firebase from "firebase/app";
-import "firebase/auth";
+
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 
 // IMPORTANT: Your web app's Firebase configuration
 // These should be set as environment variables in your Vercel project.
@@ -16,6 +16,5 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-// FIX: Updated Firebase initialization to use the v8 namespaced API syntax.
-const app = firebase.initializeApp(firebaseConfig);
-export const auth = firebase.auth();
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);

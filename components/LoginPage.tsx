@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-// FIX: Removed unused 'signInWithEmailAndPassword' import as it will be called from the auth instance.
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
 
 const getFirebaseErrorMessage = (errorCode: string): string => {
@@ -30,8 +31,7 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // FIX: Use the signInWithEmailAndPassword method from the v8 auth service instance.
-      await auth.signInWithEmailAndPassword(email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       // onAuthStateChanged in AuthGate will handle the redirect
     } catch (err: any) {
       const errorMessage = getFirebaseErrorMessage(err.code);

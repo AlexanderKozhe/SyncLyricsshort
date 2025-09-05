@@ -1,18 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
-// FIX: Updated Firebase imports and types to use the v8 namespaced API syntax.
-import firebase from 'firebase/app';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from '../firebase';
 import App from '../App';
 import LoginPage from './LoginPage';
 import SpinnerIcon from './icons/SpinnerIcon';
 
 const AuthGate: React.FC = () => {
-  const [user, setUser] = useState<firebase.User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // FIX: Use the onAuthStateChanged method from the v8 auth service instance.
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
     });
@@ -22,7 +21,7 @@ const AuthGate: React.FC = () => {
   }, []);
 
   const handleLogout = () => {
-    auth.signOut();
+    signOut(auth);
   };
 
   if (loading) {
