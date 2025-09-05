@@ -19,8 +19,8 @@ const genAI = new GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest"});
 
 // Основная функция-обработчик
-// ИЗМЕНЕНО: Экспорт изменен на именованный `handle` для лучшей совместимости со средой Vercel.
-export async function handle(
+// ВОЗВРАЩЕНО: Используем `export default` для совместимости с новой конфигурацией tsconfig.
+export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
