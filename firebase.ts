@@ -1,9 +1,7 @@
-
-
-// FIX: Module '"firebase/app"' has no exported member 'initializeApp'. Use namespaced import for Firebase v8 SDK.
-import firebase from "firebase/app";
-// FIX: Module '"firebase/auth"' has no exported member 'getAuth'. Import "firebase/auth" for side effects.
-import "firebase/auth";
+// FIX: Switch to Firebase v9 compat imports to resolve module export errors.
+// This is likely needed if the project uses an older version of the Firebase SDK.
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
 
 // IMPORTANT: Your web app's Firebase configuration
 // These should be set as environment variables in your Vercel project.
@@ -19,7 +17,6 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
+// FIX: Use v8-style initialization with the compat library.
+const app = firebase.initializeApp(firebaseConfig);
 export const auth = firebase.auth();

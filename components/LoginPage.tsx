@@ -1,7 +1,5 @@
-
-
 import React, { useState } from 'react';
-// FIX: Module '"firebase/auth"' has no exported member 'signInWithEmailAndPassword'. This import is removed.
+// FIX: Removed v9 modular import for `signInWithEmailAndPassword` which was causing an error.
 import { auth } from '../firebase';
 
 const getFirebaseErrorMessage = (errorCode: string): string => {
@@ -32,7 +30,7 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // FIX: Use the `signInWithEmailAndPassword` method from the auth object (v8 API).
+      // FIX: Use the v8-style `signInWithEmailAndPassword` method from the auth object.
       await auth.signInWithEmailAndPassword(email, password);
       // onAuthStateChanged in AuthGate will handle the redirect
     } catch (err: any) {

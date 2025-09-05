@@ -1,21 +1,19 @@
-
-
 import React, { useState, useEffect } from 'react';
-// FIX: Module '"firebase/auth"' has no exported member 'onAuthStateChanged', 'signOut', or 'User'.
-// Using namespaced import for Firebase v8 SDK compatibility.
-import firebase from 'firebase/app';
+// FIX: Remove v9 modular imports that were causing errors. The new logic uses the auth object directly.
 import { auth } from '../firebase';
 import App from '../App';
 import LoginPage from './LoginPage';
 import SpinnerIcon from './icons/SpinnerIcon';
+// FIX: Import firebase compat to get the v8-style User type.
+import firebase from 'firebase/compat/app';
 
 const AuthGate: React.FC = () => {
-  // FIX: Use firebase.User type from the namespaced import.
+  // FIX: Use the v8-style User type from the firebase compat object.
   const [user, setUser] = useState<firebase.User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // FIX: Use the `onAuthStateChanged` method from the auth object (v8 API).
+    // FIX: Use the v8-style `onAuthStateChanged` method from the auth object.
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -26,7 +24,7 @@ const AuthGate: React.FC = () => {
   }, []);
 
   const handleLogout = () => {
-    // FIX: Use the `signOut` method from the auth object (v8 API).
+    // FIX: Use the v8-style `signOut` method from the auth object.
     auth.signOut();
   };
 
