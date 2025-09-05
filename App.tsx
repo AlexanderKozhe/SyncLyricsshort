@@ -10,6 +10,7 @@ import FormattingHelper from './components/FormattingHelper';
 import PlayerView from './components/PlayerView';
 import { applyFix, applyFixAll } from './services/analysis';
 import Modal from './components/Modal';
+import AdminView from './components/AdminView';
 
 const DRAFT_KEY = 'zion_sync_draft';
 
@@ -177,7 +178,7 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
   }, [lines]);
 
   const isTabDisabled = useCallback((tab: Tab) => {
-    if (tab === Tab.Audio) return false;
+    if (tab === Tab.Audio || tab === Tab.Admin) return false;
 
     // A source is either loaded audio, a draft, or explicit no-audio mode.
     const hasSource = !!audioUrl || showDraftNotice || noAudioMode;
@@ -243,6 +244,8 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
         return <ResultView lines={lines} audioDuration={audioDuration} audioFileName={audioFileName} noAudioMode={noAudioMode} />;
       case Tab.Player:
         return <PlayerView lines={lines} audioRef={audioRef} />;
+      case Tab.Admin:
+        return <AdminView />;
       default:
         return null;
     }

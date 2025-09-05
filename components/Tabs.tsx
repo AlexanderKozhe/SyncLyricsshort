@@ -13,6 +13,7 @@ const tabConfig: { id: Tab; label: string }[] = [
   { id: Tab.Sync, label: '3. Синхронизация' },
   { id: Tab.Result, label: '4. Результат' },
   { id: Tab.Player, label: '5. Плеер' },
+  { id: Tab.Admin, label: 'Админ' },
 ];
 
 const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, isTabDisabled }) => {
