@@ -16,11 +16,11 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// ИСПРАВЛЕНО: Используем современную и быструю модель
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest"});
 
 // Основная функция-обработчик
-export default async function handler(
+// ИЗМЕНЕНО: Экспорт изменен на именованный `handle` для лучшей совместимости со средой Vercel.
+export async function handle(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -50,7 +50,6 @@ export default async function handler(
     // Улучшаем логирование ошибок
     console.error('Ошибка при вызове Gemini API:', error);
     
-    // Возвращаем более детальную информацию об ошибке, если она доступна
     const errorMessage = error.message || 'Internal Server Error';
     const errorStatus = error.status || 500;
     
