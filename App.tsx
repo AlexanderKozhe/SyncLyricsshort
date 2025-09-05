@@ -11,12 +11,15 @@ import PlayerView from './components/PlayerView';
 import AdminView from './components/AdminView';
 import { applyFix, applyFixAll } from './services/analysis';
 import Modal from './components/Modal';
-import LoginModal from './components/LoginModal';
 
 const DRAFT_KEY = 'zion_sync_draft';
-const AUTH_KEY = 'zion_sync_auth';
 
-const App: React.FC = () => {
+interface AppProps {
+  user: { email: string | null };
+  onLogout: () => void;
+}
+
+const App: React.FC<AppProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.Audio);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
@@ -28,27 +31,11 @@ const App: React.FC = () => {
   const [draftAudioName, setDraftAudioName] = useState('');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [noAudioMode, setNoAudioMode] = useState(false);
-  
-  // New state for admin functionality
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const textEditorRef = useRef<{ scrollToLine: (index: number) => void }>(null);
   
   const hasLoaded = useRef(false);
-
-  // Check login status on initial load
-  useEffect(() => {
-    try {
-      const authStatus = localStorage.getItem(AUTH_KEY);
-      if (authStatus === 'true') {
-        setIsLoggedIn(true);
-      }
-    } catch (error) {
-      console.error("Failed to check auth status:", error);
-    }
-  }, []);
 
   useEffect(() => {
     if (hasLoaded.current) return;
@@ -133,20 +120,6 @@ const App: React.FC = () => {
     setIsResetModalOpen(false);
   };
 
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-    localStorage.setItem(AUTH_KEY, 'true');
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem(AUTH_KEY);
-    if (activeTab === Tab.Admin) {
-      setActiveTab(Tab.Audio);
-    }
-  };
-
-
   const handleTextChange = (newText: string) => {
     const newTextLines = newText.split('\n');
     const oldLines = lines;
@@ -204,7 +177,7 @@ const App: React.FC = () => {
   }, [lines]);
 
   const isTabDisabled = useCallback((tab: Tab) => {
-    if (tab === Tab.Admin) return !isLoggedIn;
+    if (tab === Tab.Admin) return false; // Always enabled for logged in users
     if (tab === Tab.Audio) return false;
 
     // A source is either loaded audio, a draft, or explicit no-audio mode.
@@ -226,7 +199,7 @@ const App: React.FC = () => {
     if (tab === Tab.Player && !allLinesSynced) return true;
 
     return false;
-  }, [audioUrl, lines, showDraftNotice, allLinesSynced, isLoggedIn, noAudioMode]);
+  }, [audioUrl, lines, showDraftNotice, allLinesSynced, noAudioMode]);
   
   const handleGoToIssue = (lineIndex: number) => {
     setScrollToLineIndex(lineIndex);
@@ -285,22 +258,17 @@ const App: React.FC = () => {
           <h1 className="text-2xl font-bold text-white mb-1">Zion Distribution</h1>
           <p className="text-slate-400 text-sm">Построчный редактор и синхронизатор субтитров</p>
         </div>
-        <div>
-          {isLoggedIn ? (
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-slate-600/80 text-white text-sm font-semibold rounded-lg hover:bg-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            >
-              Выход
-            </button>
-          ) : (
-            <button
-              onClick={() => setIsLoginModalOpen(true)}
-              className="px-4 py-2 bg-sky-600/80 text-white text-sm font-semibold rounded-lg hover:bg-sky-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            >
-              Вход
-            </button>
-          )}
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-sm font-medium text-white">{user.email}</p>
+            <p className="text-xs text-slate-400">Администратор</p>
+          </div>
+          <button
+            onClick={onLogout}
+            className="px-4 py-2 bg-slate-600/80 text-white text-sm font-semibold rounded-lg hover:bg-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          >
+            Выход
+          </button>
         </div>
       </header>
 
@@ -366,12 +334,6 @@ const App: React.FC = () => {
           </p>
         </Modal>
       )}
-
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
     </div>
   );
 };
