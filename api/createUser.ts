@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import admin from './firebaseAdmin'; // Импортируем наш настроенный admin
+// Импортируем auth и firestore как именованные экспорты
+import { auth, firestore } from './firebaseAdmin';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 1. Проверяем, что это POST-запрос
@@ -14,10 +15,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ message: 'Токен не предоставлен или имеет неверный формат.' });
     }
     const idToken = authorization.split('Bearer ')[1];
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const decodedToken = await auth.verifyIdToken(idToken);
 
     // 3. Проверяем, что у вызывающего есть роль 'admin'
-    const callerDoc = await admin.firestore().collection('users').doc(decodedToken.uid).get();
+    const callerDoc = await firestore.collection('users').doc(decodedToken.uid).get();
     if (callerDoc.data()?.role !== 'admin') {
       return res.status(403).json({ message: 'У вас нет прав на это действие.' });
     }
@@ -29,13 +30,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const tempPassword = Math.random().toString(36).slice(-8);
-    const userRecord = await admin.auth().createUser({
+    const userRecord = await auth.createUser({
       email,
       password: tempPassword,
     });
 
     // 5. Создаём запись для пользователя в Firestore
-    await admin.firestore().collection('users').doc(userRecord.uid).set({
+    await firestore.collection('users').doc(userRecord.uid).set({
       email: userRecord.email,
       role: 'user',
       isNewUser: true,
