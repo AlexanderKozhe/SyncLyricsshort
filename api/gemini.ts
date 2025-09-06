@@ -27,30 +27,44 @@ export default async function handler(req) {
     }
 
     // 2. Получаем prompt из тела запроса
-    const { prompt } = await req.json();
-    if (!prompt) {
+    const { prompt: userText } = await req.json();
+    if (!userText) {
       return new Response(JSON.stringify({ error: '"prompt" является обязательным полем.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    // 3. Создаем строгий промпт для Gemini
+    const systemPrompt = `Ты — редактор текстов песен. Исправь орфографию и грамматику в тексте ниже.
+СТРОГИЕ ПРАВИЛА:
+1. Количество строк в ответе должно ТОЧНО совпадать с количеством строк в исходном тексте.
+2. НЕ добавляй и НЕ удаляй строки.
+3. НЕ добавляй знаки препинания (точки, запятые) в конце строк, если их там не было.
+4. НЕ добавляй пустые строки в начале или в конце ответа.
+5. Верни ТОЛЬКО исправленный текст без каких-либо объяснений.
+
+Текст для исправления:
+---
+${userText}
+---`;
+
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
-    // 3. Отправляем запрос к Google Gemini
+    // 4. Отправляем запрос к Google Gemini
     const geminiResponse = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ parts: [{ text: systemPrompt }] }],
       }),
     });
 
     const responseData = await geminiResponse.json();
 
-    // 4. Обрабатываем ошибки от Gemini API
+    // 5. Обрабатываем ошибки от Gemini API
     if (!geminiResponse.ok || responseData.error) {
       console.error("Ошибка от Gemini API:", responseData.error);
       return new Response(JSON.stringify({ 
@@ -62,14 +76,17 @@ export default async function handler(req) {
       });
     }
 
-    // 5. Извлекаем и отправляем успешный ответ
-    const text = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+    // 6. Извлекаем и ОБРАБАТЫВАЕМ успешный ответ
+    let text = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) {
         return new Response(JSON.stringify({ error: 'Не удалось извлечь текст из ответа ИИ.' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });
     }
+    
+    // Дополнительная защита: обрезаем лишние пробелы и переносы по краям
+    text = text.trim();
 
     return new Response(JSON.stringify({ text }), {
       status: 200,
@@ -77,7 +94,7 @@ export default async function handler(req) {
     });
 
   } catch (error) {
-    // 6. Общий обработчик ошибок
+    // 7. Общий обработчик ошибок
     console.error('Критическая ошибка в Edge Function:', error);
     const details = (error instanceof Error) ? error.message : String(error);
     return new Response(JSON.stringify({ 
