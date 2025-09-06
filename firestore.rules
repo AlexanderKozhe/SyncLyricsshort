@@ -11,11 +11,17 @@ service cloud.firestore {
       // READ: Any authenticated user can read the user list.
       allow read: if request.auth != null;
 
-      // CREATE: A user can create THEIR OWN document, but the role MUST be 'user'.
+      // CREATE: This is primarily handled by the admin backend function.
       allow create: if request.auth.uid == userId && request.resource.data.role == 'user';
 
-      // UPDATE: Admins can update any user, and users can update their own document.
-      allow update: if isAdmin() || request.auth.uid == userId;
+      // UPDATE: 
+      // Admins can update any user document.
+      // A user can update their own document, BUT ONLY IF they are not changing their role.
+      // This rule fixes the permission error while keeping the system secure.
+      allow update: if isAdmin() || (
+        request.auth.uid == userId &&
+        (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)
+      );
       
       // DELETE: Only admins can delete users.
       allow delete: if isAdmin();
