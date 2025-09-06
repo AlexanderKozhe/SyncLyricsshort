@@ -12,11 +12,13 @@ service cloud.firestore {
       allow read: if request.auth != null;
 
       // CREATE: A user can create THEIR OWN document, but the role MUST be 'user'.
-      // This is now only for future new users, not for you.
       allow create: if request.auth.uid == userId && request.resource.data.role == 'user';
 
-      // UPDATE & DELETE: Only admins can perform these actions.
-      allow update, delete: if isAdmin();
+      // UPDATE: Admins can update any user, and users can update their own document.
+      allow update: if isAdmin() || request.auth.uid == userId;
+      
+      // DELETE: Only admins can delete users.
+      allow delete: if isAdmin();
     }
   }
 }

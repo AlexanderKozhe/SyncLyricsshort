@@ -7,8 +7,10 @@ interface ModalProps {
   onConfirm: () => void;
   title: string;
   children: React.ReactNode;
-  confirmText?: string;
+  confirmText?: string | null;
   cancelText?: string;
+  isConfirmDisabled?: boolean;
+  isConfirmPrimary?: boolean; // To switch confirm button style
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -19,6 +21,8 @@ const Modal: React.FC<ModalProps> = ({
   children,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
+  isConfirmDisabled = false,
+  isConfirmPrimary = false,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +35,8 @@ const Modal: React.FC<ModalProps> = ({
 
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
-      modalRef.current?.focus();
+      // Small delay to ensure the modal is rendered before focusing
+      setTimeout(() => modalRef.current?.focus(), 50);
     }
 
     return () => {
@@ -42,6 +47,10 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) {
     return null;
   }
+  
+  const confirmButtonClass = isConfirmPrimary
+    ? "bg-sky-500 hover:bg-sky-600 focus:ring-sky-500"
+    : "bg-red-600 hover:bg-red-700 focus:ring-red-500";
 
   return (
     <div
@@ -56,6 +65,7 @@ const Modal: React.FC<ModalProps> = ({
         className="relative w-full max-w-md m-4 bg-slate-800 rounded-lg shadow-xl border border-slate-700 text-slate-200"
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
+        role="document"
       >
         <div className="flex items-start justify-between p-5 border-b border-slate-700 rounded-t">
           <h3 className="text-xl font-semibold text-white" id="modal-title">
@@ -81,13 +91,16 @@ const Modal: React.FC<ModalProps> = ({
           >
             {cancelText}
           </button>
-          <button
-            onClick={onConfirm}
-            type="button"
-            className="px-5 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-500 transition-colors"
-          >
-            {confirmText}
-          </button>
+          {confirmText && (
+            <button
+                onClick={onConfirm}
+                type="button"
+                disabled={isConfirmDisabled}
+                className={`px-5 py-2.5 text-sm font-medium text-white rounded-lg focus:ring-4 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${confirmButtonClass}`}
+            >
+                {confirmText}
+            </button>
+          )}
         </div>
       </div>
     </div>
