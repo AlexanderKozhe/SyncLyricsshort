@@ -1,33 +1,43 @@
 
-// /api/gemini.ts - Typeless version for debugging
+// /api/gemini.ts - Используем Vercel Edge Config
+import { get } from '@vercel/edge-config';
 
-export default async function handler(req, res) {
-  // Всегда возвращаем JSON
-  res.setHeader('Content-Type', 'application/json');
+export const config = {
+  runtime: 'edge', // Обязательно для работы с Edge Config
+};
 
-  // 1. Проверяем метод запроса
+export default async function handler(req) {
+  // Используем `Request` объект вместо `VercelRequest` в edge-runtime
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+    return new Response(JSON.stringify({ error: `Method ${req.method} Not Allowed` }), {
+      status: 405,
+      headers: { 'Allow': 'POST', 'Content-Type': 'application/json' },
+    });
   }
 
   try {
-    // 2. Проверяем наличие и валидность API ключа
-    const apiKey = process.env.GEMINI_API_KEY;
+    // 1. Получаем ключ из Vercel Edge Config
+    const apiKey = await get('GEMINI_API_KEY');
     if (!apiKey) {
-      console.error("FATAL: Переменная окружения GEMINI_API_KEY не найдена на сервере.");
-      return res.status(500).json({ error: 'Ошибка конфигурации сервера: API-ключ не предоставлен.' });
+      console.error("FATAL: Не удалось получить GEMINI_API_KEY из Vercel Edge Config.");
+      return new Response(JSON.stringify({ error: 'Ошибка конфигурации сервера: API-ключ не найден.' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    // 3. Проверяем тело запроса
-    const { prompt } = req.body;
+    // 2. Получаем prompt из тела запроса
+    const { prompt } = await req.json();
     if (!prompt) {
-      return res.status(400).json({ error: '"prompt" является обязательным полем в теле запроса.' });
+      return new Response(JSON.stringify({ error: '"prompt" является обязательным полем.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
 
-    // 4. Отправляем запрос к Google Gemini REST API
+    // 3. Отправляем запрос к Google Gemini
     const geminiResponse = await fetch(API_URL, {
       method: 'POST',
       headers: {
@@ -40,31 +50,42 @@ export default async function handler(req, res) {
 
     const responseData = await geminiResponse.json();
 
-    // 5. Обрабатываем ошибку от самого Gemini API
+    // 4. Обрабатываем ошибки от Gemini API
     if (!geminiResponse.ok || responseData.error) {
       console.error("Ошибка от Gemini API:", responseData.error);
-      return res.status(geminiResponse.status || 500).json({ 
+      return new Response(JSON.stringify({ 
         error: "Ошибка при обращении к сервису ИИ.",
         details: responseData.error?.message || "Причина не указана."
+      }), {
+        status: geminiResponse.status || 500,
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // 6. Извлекаем и отправляем успешный ответ
+    // 5. Извлекаем и отправляем успешный ответ
     const text = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) {
-        return res.status(500).json({ error: 'Не удалось извлечь текст из ответа ИИ.' });
+        return new Response(JSON.stringify({ error: 'Не удалось извлечь текст из ответа ИИ.' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
 
-    return res.status(200).json({ text });
+    return new Response(JSON.stringify({ text }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
-    // 7. Общий обработчик для непредвиденных ошибок
-    console.error('Критическая ошибка в обработчике API:', error);
-    // В Vercel `error` может быть не объектом, преобразуем в строку
+    // 6. Общий обработчик ошибок
+    console.error('Критическая ошибка в Edge Function:', error);
     const details = (error instanceof Error) ? error.message : String(error);
-    return res.status(500).json({ 
+    return new Response(JSON.stringify({ 
       error: 'Произошла внутренняя ошибка сервера.',
       details: details
+    }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
     });
   }
 }
