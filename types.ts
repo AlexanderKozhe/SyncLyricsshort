@@ -12,6 +12,8 @@ export enum Tab {
   Result = 'result',
   Player = 'player',
   Admin = 'admin',
+  Profile = 'profile',
+
 }
 
 export type IssueType = 'doubleSpaces' | 'capitalization' | 'trim' | 'punctuation' | 'symbols' | 'emptyLines' | 'startEmpty' | 'endEmpty' | 'tags';
@@ -26,4 +28,19 @@ export interface AnalysisIssue {
 
 export interface AnalysisResult {
   [key: string]: AnalysisIssue[];
+}
+
+export enum Role {
+  User = 'user',
+  Admin = 'admin',
+  Curator = 'curator',
+}
+
+export interface User {
+  uid: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  role: Role;
+  photoURL: string | null;
 }

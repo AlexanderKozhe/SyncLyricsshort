@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
 import { db } from './firebase'; // Import db from your firebase config
-import { Tab, SyncedLine, IssueType } from './types';
+import { Tab, SyncedLine, IssueType, User, Role } from './types';
 import Tabs from './components/Tabs';
 import AudioUpload from './components/AudioUpload';
 import TextEditor from './components/TextEditor';
@@ -13,6 +13,8 @@ import PlayerView from './components/PlayerView';
 import { applyFix, applyFixAll } from './services/analysis';
 import Modal from './components/Modal';
 import AdminView from './components/AdminView';
+import ProfilePage from './components/ProfilePage';
+import ProfileDropdown from './components/ProfileDropdown';
 
 const DRAFT_KEY = 'zion_sync_draft';
 
@@ -33,7 +35,7 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
   const [draftAudioName, setDraftAudioName] = useState('');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [noAudioMode, setNoAudioMode] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userProfile, setUserProfile] = useState<User | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const textEditorRef = useRef<{ scrollToLine: (index: number) => void }>(null);
@@ -41,27 +43,37 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
   const hasLoaded = useRef(false);
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const fetchUserProfile = async () => {
       if (!user) {
-        setIsAdmin(false);
+        setUserProfile(null);
         return;
       }
       try {
         const userDocRef = db.collection('users').doc(user.uid);
         const userDoc = await userDocRef.get();
 
-        if (userDoc.exists && userDoc.data()?.role === 'admin') {
-          setIsAdmin(true);
+        if (userDoc.exists) {
+          const userData = userDoc.data() as Omit<User, 'uid'>;
+          setUserProfile({ uid: user.uid, ...userData });
         } else {
-          setIsAdmin(false);
+          const newUserProfile: User = {
+            uid: user.uid,
+            email: user.email,
+            firstName: user.email?.split('@')[0] || 'New',
+            lastName: 'User',
+            role: Role.User,
+            photoURL: null,
+          };
+          await userDocRef.set(newUserProfile);
+          setUserProfile(newUserProfile);
         }
       } catch (error) {
-        console.error("Error checking admin status:", error);
-        setIsAdmin(false); // Default to non-admin on error
+        console.error("Error fetching user profile:", error);
+        setUserProfile(null);
       }
     };
 
-    checkAdminStatus();
+    fetchUserProfile();
   }, [user]);
 
   useEffect(() => {
@@ -154,15 +166,13 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
     const finalLines: SyncedLine[] = new Array(newTextLines.length).fill(null);
     const availableOldLines: (SyncedLine | null)[] = [...oldLines];
 
-    // Фаза 1: Сопоставление по точному совпадению текста и индекса ("якоря")
     newTextLines.forEach((newLineText, index) => {
         if (index < availableOldLines.length && availableOldLines[index]?.text === newLineText) {
             finalLines[index] = availableOldLines[index]!;
-            availableOldLines[index] = null; // Пометить как использованную
+            availableOldLines[index] = null;
         }
     });
 
-    // Фаза 2: Сопоставление по тексту (для перемещенных строк)
     finalLines.forEach((line, index) => {
         if (line === null) {
             const newLineText = newTextLines[index];
@@ -170,12 +180,11 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
 
             if (availableIndex !== -1) {
                 finalLines[index] = availableOldLines[availableIndex]!;
-                availableOldLines[availableIndex] = null; // Пометить как использованную
+                availableOldLines[availableIndex] = null;
             }
         }
     });
     
-    // Фаза 3: Создание новых строк для оставшихся
     finalLines.forEach((line, index) => {
         if (line === null) {
              finalLines[index] = {
@@ -187,12 +196,28 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
         }
     });
 
-    setLines(finalLines.filter(l => l)); // Фильтруем возможные null в конце
+    setLines(finalLines.filter(l => l));
   };
   
   const handleLinesUpload = (newLines: SyncedLine[]) => {
     setLines(newLines);
     setActiveTab(Tab.Sync);
+  };
+  
+  const handleProfileUpdate = async (updatedProfile: Partial<User>) => {
+    if (!userProfile) return;
+
+    const newProfile = { ...userProfile, ...updatedProfile };
+    setUserProfile(newProfile);
+
+    try {
+      const userDocRef = db.collection('users').doc(userProfile.uid);
+      await userDocRef.update(updatedProfile);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      // Optionally, revert the local state change
+      setUserProfile(userProfile);
+    }
   };
 
   const textForEditor = useMemo(() => {
@@ -205,35 +230,32 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
 
   const isTabDisabled = useCallback((tab: Tab) => {
     if (tab === Tab.Audio) return false;
-    if (tab === Tab.Admin) return !isAdmin;
+    if (tab === Tab.Admin) return userProfile?.role !== Role.Admin;
+    if (tab === Tab.Profile) return !userProfile;
 
-    // A source is either loaded audio, a draft, or explicit no-audio mode.
     const hasSource = !!audioUrl || showDraftNotice || noAudioMode;
-    if (!hasSource) return true; // Disable everything but Audio if no source is selected
+    if (!hasSource) return true;
 
     const hasText = lines.length > 0;
 
     if (!hasText && (tab === Tab.Sync || tab === Tab.Result || tab === Tab.Player)) {
-        return true; // These tabs require text
+        return true;
     }
     
-    // Sync and Player specifically require an audio file.
     if (tab === Tab.Sync || tab === Tab.Player) {
         if (noAudioMode || !audioUrl) return true;
     }
    
-    // Player additionally requires all lines to be synced.
     if (tab === Tab.Player && !allLinesSynced) return true;
 
     return false;
-  }, [audioUrl, lines, showDraftNotice, allLinesSynced, noAudioMode, isAdmin]);
+  }, [audioUrl, lines, showDraftNotice, allLinesSynced, noAudioMode, userProfile]);
   
   const handleGoToIssue = (lineIndex: number) => {
     setScrollToLineIndex(lineIndex);
     if (activeTab === Tab.Text && textEditorRef.current) {
       textEditorRef.current.scrollToLine(lineIndex);
     }
-     // Forcing a reset after a short delay to allow re-triggering for the same index
     setTimeout(() => setScrollToLineIndex(null), 50);
   };
 
@@ -245,6 +267,10 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
   const handleFixAll = (issueType: IssueType) => {
     const newLines = applyFixAll(lines, issueType);
     setLines(newLines);
+  };
+
+  const handleProfileClick = () => {
+    setActiveTab(Tab.Profile);
   };
 
   const renderContent = () => {
@@ -273,6 +299,8 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
         return <PlayerView lines={lines} audioRef={audioRef} />;
       case Tab.Admin:
         return <AdminView />;
+      case Tab.Profile:
+        return userProfile ? <ProfilePage user={userProfile} onUpdate={handleProfileUpdate} /> : null;
       default:
         return null;
     }
@@ -285,23 +313,15 @@ const App: React.FC<AppProps> = ({ user, onLogout }) => {
           <h1 className="text-2xl font-bold text-white mb-1">Zion Distribution</h1>
           <p className="text-slate-400 text-sm">Построчный редактор и синхронизатор субтитров</p>
         </div>
-        {user && onLogout && (
-          <div className="flex items-center gap-4">
-            {user.email && <span className="text-sm text-slate-300 hidden sm:inline">{user.email}</span>}
-            <button
-              onClick={onLogout}
-              className="px-4 py-2 bg-slate-700 text-white text-sm font-semibold rounded-lg hover:bg-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-            >
-              Выйти
-            </button>
-          </div>
+        {userProfile && onLogout && (
+          <ProfileDropdown user={userProfile} onLogout={onLogout} onProfileClick={handleProfileClick} />
         )}
       </header>
 
 
       <main className="flex-grow flex flex-col overflow-hidden">
         <div className="flex justify-between items-center">
-            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} isTabDisabled={isTabDisabled} isAdmin={isAdmin} />
+            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} isTabDisabled={isTabDisabled} isAdmin={userProfile?.role === Role.Admin} />
              <div className="px-6">
                 <button 
                   onClick={() => setIsResetModalOpen(true)}
