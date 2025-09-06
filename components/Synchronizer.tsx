@@ -28,7 +28,6 @@ const formatTime = (seconds: number | null) => {
 
 const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, onToggleHelper, scrollToLineIndex }) => {
   const [activeIndex, setActiveIndex] = useState<number>(0);
-  const [syncMode, setSyncMode] = useState<'begin' | 'end'>('begin');
   const activeLineRef = useRef<HTMLDivElement>(null);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
@@ -90,25 +89,14 @@ const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, 
     }
   }, [focusIndex, lines, cursorPosition]);
 
-
-  useEffect(() => {
-    const activeLine = lines[activeIndex];
-    if (activeLine) {
-        // Пустые строки теперь могут быть активны, но кнопка синхронизации будет отключена
-        if (activeLine.text.trim() !== '' && activeLine.begin !== null && activeLine.end === null) {
-            setSyncMode('end');
-        } else {
-            setSyncMode('begin');
-        }
-    }
-  }, [activeIndex, lines]);
-  
   const handleSyncAction = () => {
     if (!audioRef.current) return;
     const currentTime = audioRef.current.currentTime;
     const currentLine = lines[activeIndex];
 
     if (!currentLine || currentLine.text.trim() === '') return;
+
+    const syncMode = (currentLine.text.trim() !== '' && currentLine.begin !== null && currentLine.end === null) ? 'end' : 'begin';
 
     if (syncMode === 'begin') {
       setLines(prevLines => prevLines.map((line, index) =>
@@ -308,7 +296,10 @@ const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, 
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [activeIndex, lines, syncMode, handleSyncAction]);
+  }, [activeIndex, lines, handleSyncAction]);
+
+  const currentLine = lines[activeIndex];
+  const syncMode = (currentLine?.text.trim() !== '' && currentLine?.begin !== null && currentLine?.end === null) ? 'end' : 'begin';
 
   return (
     <div className="h-full flex flex-col bg-slate-800 rounded-lg overflow-hidden relative">
