@@ -3,6 +3,7 @@ import { SyncedLine } from '../types';
 import ChevronUpIcon from './icons/ChevronUpIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import SparklesIcon from './icons/SparklesIcon';
+import ResetIcon from './icons/ResetIcon';
 
 interface SynchronizerProps {
   lines: SyncedLine[];
@@ -298,6 +299,23 @@ const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, 
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [activeIndex, lines, handleSyncAction]);
 
+  const handleResetAll = () => {
+    if (window.confirm('Вы уверены, что хотите сбросить всю синхронизацию? Это действие необратимо.')) {
+      setLines(prevLines =>
+        prevLines.map(line => ({ ...line, begin: null, end: null }))
+      );
+      setActiveIndex(0);
+    }
+  };
+
+  const handleResetLine = (index: number) => {
+    setLines(prevLines =>
+      prevLines.map((line, i) =>
+        i === index ? { ...line, begin: null, end: null } : line
+      )
+    );
+  };
+
   const currentLine = lines[activeIndex];
   const syncMode = (currentLine?.text.trim() !== '' && currentLine?.begin !== null && currentLine?.end === null) ? 'end' : 'begin';
 
@@ -311,14 +329,24 @@ const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, 
             <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded-md text-sky-400 mx-1">↑ ↓</span> для навигации.
           </p>
         </div>
-         <button
-          onClick={onToggleHelper}
-          className="flex items-center gap-2 whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium transition-all duration-300 ease-in-out bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
-          title="Помощник по форматированию"
-        >
-          <SparklesIcon />
-          <span>Помощник</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleResetAll}
+            className="flex items-center gap-2 whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium transition-all duration-300 ease-in-out bg-slate-700 text-slate-300 hover:bg-red-600 hover:text-white"
+            title="Сбросить всю синхронизацию"
+          >
+            <ResetIcon />
+            <span>Сбросить все</span>
+          </button>
+          <button
+            onClick={onToggleHelper}
+            className="flex items-center gap-2 whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium transition-all duration-300 ease-in-out bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
+            title="Помощник по форматированию"
+          >
+            <SparklesIcon />
+            <span>Помощник</span>
+          </button>
+        </div>
       </div>
       <div className="flex-grow overflow-y-auto custom-scrollbar p-2 pb-24">
         <div className="space-y-2">
@@ -342,6 +370,14 @@ const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, 
                   onClick={(e) => e.stopPropagation()}
                   className="flex-grow bg-transparent focus:bg-slate-800/70 focus:outline-none focus:ring-1 focus:ring-sky-600 rounded px-2 py-1 -my-1"/>
                 <div className="flex items-center gap-3">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleResetLine(index); }}
+                    disabled={line.begin === null && line.end === null}
+                    className="text-slate-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Сбросить время для этой строки"
+                  >
+                    <ResetIcon className="w-5 h-5" />
+                  </button>
                   <div className="text-center">
                     <span className="text-xs text-slate-400">Начало</span>
                     <div className="flex items-center gap-1 font-mono text-sm">
