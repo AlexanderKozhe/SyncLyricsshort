@@ -1,55 +1,88 @@
 
 // /api/gemini.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Используем `export default` для совместимости с новой конфигурацией tsconfig.
+// Определяем интерфейс для тела запроса
+interface GeminiRequestBody {
+  prompt: string;
+}
+
+// Определяем интерфейс для ответа от Google Gemini API
+interface GeminiApiResponse {
+  candidates?: Array<{
+    content: {
+      parts: Array<{ text: string }>;
+    };
+  }>;
+  error?: {
+    message: string;
+  };
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  // Устанавливаем заголовок, чтобы все ответы были в формате JSON
+  // Всегда возвращаем JSON
   res.setHeader('Content-Type', 'application/json');
 
-  try {
-    // 1. Проверяем метод запроса
-    if (req.method !== 'POST') {
-      res.setHeader('Allow', ['POST']);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-    }
+  // 1. Проверяем метод запроса
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  }
 
-    // 2. Проверяем наличие API ключа
+  try {
+    // 2. Проверяем наличие и валидность API ключа
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error("Переменная окружения GEMINI_API_KEY не установлена");
-      return res.status(500).json({ error: 'Ошибка конфигурации сервера: отсутствует API-ключ.' });
+      console.error("FATAL: Переменная окружения GEMINI_API_KEY не найдена на сервере.");
+      return res.status(500).json({ error: 'Ошибка конфигурации сервера: API-ключ не предоставлен.' });
     }
 
-    // 3. Проверяем наличие `prompt` в теле запроса
-    const { prompt } = req.body;
+    // 3. Проверяем тело запроса
+    const { prompt } = req.body as GeminiRequestBody;
     if (!prompt) {
-      return res.status(400).json({ error: 'Плохой запрос: "prompt" является обязательным в теле запроса.' });
+      return res.status(400).json({ error: '"prompt" является обязательным полем в теле запроса.' });
     }
 
-    // Инициализируем модель ИИ
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // ОБНОВЛЕНО: Используем более новую модель, как вы и предложили
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
 
-    // 4. Вызываем Gemini API
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // 4. Отправляем запрос к Google Gemini REST API
+    const geminiResponse = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type', 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    });
 
-    // 5. Отправляем успешный ответ
+    const responseData: GeminiApiResponse = await geminiResponse.json();
+
+    // 5. Обрабатываем ошибку от самого Gemini API (например, невалидный ключ)
+    if (!geminiResponse.ok || responseData.error) {
+      console.error("Ошибка от Gemini API:", responseData.error);
+      return res.status(geminiResponse.status || 500).json({ 
+        error: "Ошибка при обращении к сервису ИИ.",
+        details: responseData.error?.message || "Причина не указана."
+      });
+    }
+
+    // 6. Извлекаем и отправляем успешный ответ
+    const text = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+        return res.status(500).json({ error: 'Не удалось извлечь текст из ответа ИИ.' });
+    }
+
     return res.status(200).json({ text });
 
   } catch (error: any) {
-    // 6. Общий обработчик для всех остальных ошибок
-    console.error('Ошибка в обработчике Gemini API:', error);
-    
+    // 7. Общий обработчик для непредвиденных ошибок (например, проблем с сетью)
+    console.error('Критическая ошибка в обработчике API:', error);
     return res.status(500).json({ 
-      error: 'Произошла внутренняя ошибка сервера при обращении к сервису ИИ.',
+      error: 'Произошла внутренняя ошибка сервера.',
       details: error.message || 'Дополнительные сведения отсутствуют.'
     });
   }
