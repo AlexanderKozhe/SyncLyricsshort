@@ -33,7 +33,8 @@ export default async function handler(
 
     // Инициализируем модель ИИ
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    // ОБНОВЛЕНО: Используем более новую модель, как вы и предложили
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     // 4. Вызываем Gemini API
     const result = await model.generateContent(prompt);
