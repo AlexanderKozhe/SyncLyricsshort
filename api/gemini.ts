@@ -52,7 +52,8 @@ export default async function handler(
     const geminiResponse = await fetch(API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type', 'application/json',
+        // ИСПРАВЛЕНО: была синтаксическая ошибка (запятая вместо двоеточия)
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
