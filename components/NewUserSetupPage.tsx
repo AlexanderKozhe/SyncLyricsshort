@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { auth, db } from '../firebase';
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { User } from '../types'; // Используем наш типизированный User
 import SpinnerIcon from './icons/SpinnerIcon';
-import firebase from 'firebase/compat/app';
-import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
+// 1. ИСПРАВЛЕНЫ ПРОПСЫ: теперь они соответствуют App.tsx
 interface NewUserSetupPageProps {
-  user: firebase.User;
-  onSetupComplete: () => void;
+  user: User;
+  onSave: (data: { firstName: string; lastName: string; photoURL?: string }) => Promise<void>;
 }
 
-const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSetupComplete }) => {
+const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSave }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [photoURL, setPhotoURL] = useState('');
@@ -18,6 +18,7 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSetupComple
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const auth = getAuth();
 
   const handleLogout = async () => {
     try {
@@ -34,35 +35,62 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSetupComple
       setError('Пароли не совпадают');
       return;
     }
+    if (!newPassword || newPassword.length < 6) {
+      setError('Новый пароль должен быть не менее 6 символов');
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    
-    try {
-      if (!user.email) {
-        throw new Error("Email пользователя не найден.");
-      }
-      
-      const credential = EmailAuthProvider.credential(user.email, tempPassword);
-      await reauthenticateWithCredential(user, credential);
 
-      await user.updateProfile({ displayName: `${firstName} ${lastName}`, photoURL });
-      await user.updatePassword(newPassword);
-      await db.collection('users').doc(user.uid).update({
-        firstName,
-        lastName,
-        photoURL,
-        isNewUser: false,
+    const currentUser = auth.currentUser;
+    if (!currentUser || !currentUser.email) {
+      setError("Не удалось определить текущего пользователя. Пожалуйста, войдите снова.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Шаг 1: Повторная аутентификация пользователя
+      const credential = EmailAuthProvider.credential(currentUser.email, tempPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+
+      // 2. ПРАВИЛЬНЫЙ ПОРЯДОК: СНАЧАЛА СОХРАНЯЕМ ДАННЫЕ В FIRESTORE
+      // Вызываем onSave, переданный из App.tsx
+      await onSave({ 
+        firstName, 
+        lastName, 
+        photoURL: photoURL || ''
       });
 
-      onSetupComplete();
+      // 3. ПОСЛЕ УСПЕШНОГО СОХРАНЕНИЯ: МЕНЯЕМ ПАРОЛЬ
+      // Это аннулирует старый токен, но данные уже в безопасности.
+      await updatePassword(currentUser, newPassword);
+
+      // Перезагрузка страницы не нужна, т.к. App.tsx сам обновит состояние
+      // onSave уже обновил userProfile в App.tsx
 
     } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/wrong-password') {
-        setError('Неверный временный пароль.');
-      } else {
-        setError(err.message || 'Произошла неизвестная ошибка.');
+      console.error("Ошибка при настройке профиля:", err);
+      let errorMessage = 'Произошла неизвестная ошибка.';
+      switch (err.code) {
+        case 'auth/wrong-password':
+          errorMessage = 'Неверный временный пароль. Попробуйте еще раз.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Слишком много попыток. Пожалуйста, попробуйте позже.';
+          break;
+        case 'auth/invalid-credential':
+           errorMessage = 'Данные для входа неверны. Проверьте временный пароль.';
+           break;
+        case 'permission-denied': // Firestore permission error
+            errorMessage = 'Ошибка прав доступа при сохранении данных. Проверьте правила безопасности Firestore.';
+            break;
+        default:
+            errorMessage = err.message || errorMessage;
+            break;
       }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -71,10 +99,9 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSetupComple
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-200">
       <div className="max-w-md w-full p-8 bg-slate-800 rounded-lg shadow-xl">
-        <h1 className="text-3xl font-bold mb-4 text-center">Привет, новый пользователь!</h1>
-        <p className="text-slate-400 mb-6 text-center">Пожалуйста, завершите регистрацию, указав свои данные.</p>
+        <h1 className="text-3xl font-bold mb-4 text-center">Завершение регистрации</h1>
+        <p className="text-slate-400 mb-6 text-center">Пожалуйста, укажите ваши данные и установите новый пароль.</p>
         <form onSubmit={handleSetup}>
-          {/* ...поля формы остались без изменений... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <input
               type="text"
@@ -102,6 +129,7 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSetupComple
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
+          <hr className="border-slate-600 my-6" />
           <div className="mb-4">
             <input
               type="password"
@@ -115,7 +143,7 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSetupComple
           <div className="mb-4">
             <input
               type="password"
-              placeholder="Новый пароль"
+              placeholder="Новый пароль (минимум 6 символов)"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -132,15 +160,15 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSetupComple
               required
             />
           </div>
-          {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
+          {error && <p className="text-red-400 text-sm text-center mb-4 bg-red-900/50 p-3 rounded-md">{error}</p>}
           <div className="space-y-3">
             <button
               type="submit"
-              className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center"
+              className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center disabled:bg-sky-800 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading && <SpinnerIcon className="mr-2" />}
-              Завершить регистрацию
+              Сохранить и войти
             </button>
             <button
               type="button"
