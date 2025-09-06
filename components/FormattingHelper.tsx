@@ -4,8 +4,6 @@ import { analyzeText } from '../services/analysis';
 import CloseIcon from './icons/CloseIcon';
 import WandIcon from './icons/WandIcon';
 
-// УДАЛЕНО: import { GoogleGenAI } from "@google/genai"; - больше не нужен на фронтенде
-
 interface FormattingHelperProps {
   lines: SyncedLine[];
   onClose: () => void;
@@ -94,29 +92,20 @@ const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onG
     setAiError(null);
     try {
         const fullText = lines.map(line => line.text).join('\n');
-        
-        // Формируем системную инструкцию и сам запрос для AI
-        const systemInstruction = "You are an expert editor for video subtitles. Your task is to proofread and correct text for grammar, spelling, capitalization, and punctuation. The user will provide text where each line is a separate subtitle. Your response must have the exact same number of lines as the input. Do not merge lines, do not split lines, and do not add or remove lines. Only correct the text within each line. The text is in Russian.";
-        const userPrompt = `Исправь следующий текст:
 
-${fullText}`;
-        const fullPrompt = `${systemInstruction}
-
-${userPrompt}`;
-
-
-        // Отправляем запрос на нашу серверную функцию, а не напрямую в Google
+        // Отправляем запрос на нашу серверную функцию, которая теперь содержит всю логику
         const response = await fetch('/api/gemini', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ prompt: fullPrompt }),
+            // Просто отправляем "сырой" текст. Сервер сам сформирует нужный промпт.
+            body: JSON.stringify({ prompt: fullText }),
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || `Request failed with status ${response.status}`);
+            throw new Error(errorData.details || errorData.error || `Request failed with status ${response.status}`);
         }
 
         const data = await response.json();
@@ -127,7 +116,8 @@ ${userPrompt}`;
         }
         
         const originalLineCount = lines.length;
-        const newLineCount = (newText || '').split('\n').length;
+        // Убрал (newText || '') - проверка на newText есть выше
+        const newLineCount = newText.split('\n').length;
 
         // Эта проверка очень важна, чтобы не рассинхронизировать субтитры
         if (originalLineCount !== newLineCount) {
