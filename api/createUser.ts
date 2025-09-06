@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 // Импортируем auth и firestore как именованные экспорты
-import { auth, firestore } from './firebaseAdmin';
+// ВАЖНО: Добавляем расширение .js для совместимости с ES-модулями в Node.js
+import { auth, firestore } from './firebaseAdmin.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 1. Проверяем, что это POST-запрос
