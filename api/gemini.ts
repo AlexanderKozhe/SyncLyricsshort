@@ -1,28 +1,7 @@
 
-// /api/gemini.ts
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+// /api/gemini.ts - Typeless version for debugging
 
-// Определяем интерфейс для тела запроса
-interface GeminiRequestBody {
-  prompt: string;
-}
-
-// Определяем интерфейс для ответа от Google Gemini API
-interface GeminiApiResponse {
-  candidates?: Array<{
-    content: {
-      parts: Array<{ text: string }>;
-    };
-  }>;
-  error?: {
-    message: string;
-  };
-}
-
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
+export default async function handler(req, res) {
   // Всегда возвращаем JSON
   res.setHeader('Content-Type', 'application/json');
 
@@ -41,7 +20,7 @@ export default async function handler(
     }
 
     // 3. Проверяем тело запроса
-    const { prompt } = req.body as GeminiRequestBody;
+    const { prompt } = req.body;
     if (!prompt) {
       return res.status(400).json({ error: '"prompt" является обязательным полем в теле запроса.' });
     }
@@ -52,7 +31,6 @@ export default async function handler(
     const geminiResponse = await fetch(API_URL, {
       method: 'POST',
       headers: {
-        // ИСПРАВЛЕНО: была синтаксическая ошибка (запятая вместо двоеточия)
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -60,9 +38,9 @@ export default async function handler(
       }),
     });
 
-    const responseData: GeminiApiResponse = await geminiResponse.json();
+    const responseData = await geminiResponse.json();
 
-    // 5. Обрабатываем ошибку от самого Gemini API (например, невалидный ключ)
+    // 5. Обрабатываем ошибку от самого Gemini API
     if (!geminiResponse.ok || responseData.error) {
       console.error("Ошибка от Gemini API:", responseData.error);
       return res.status(geminiResponse.status || 500).json({ 
@@ -79,12 +57,14 @@ export default async function handler(
 
     return res.status(200).json({ text });
 
-  } catch (error: any) {
-    // 7. Общий обработчик для непредвиденных ошибок (например, проблем с сетью)
+  } catch (error) {
+    // 7. Общий обработчик для непредвиденных ошибок
     console.error('Критическая ошибка в обработчике API:', error);
+    // В Vercel `error` может быть не объектом, преобразуем в строку
+    const details = (error instanceof Error) ? error.message : String(error);
     return res.status(500).json({ 
       error: 'Произошла внутренняя ошибка сервера.',
-      details: error.message || 'Дополнительные сведения отсутствуют.'
+      details: details
     });
   }
 }
