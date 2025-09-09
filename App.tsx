@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
@@ -15,17 +16,16 @@ import Modal from './components/Modal';
 import AdminView from './components/AdminView';
 import ProfilePage from './components/ProfilePage';
 import ProfileDropdown from './components/ProfileDropdown';
+import ZionLogo from './components/icons/ZionLogo';
 
 const DRAFT_KEY = 'zion_sync_draft';
 
-// 1. ИЗМЕНЕНЫ ПРОПСЫ: App теперь получает полный, готовый userProfile
 interface AppProps {
   userProfile: User;
   onLogout: () => void;
 }
 
 const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
-  // 2. УДАЛЕНА ЛОГИКА ЗАГРУЗКИ: App доверяет данным, которые ему передали
   const [userProfile, setUserProfile] = useState(initialProfile);
   const [activeTab, setActiveTab] = useState<Tab>(Tab.Audio);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -43,12 +43,10 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   const textEditorRef = useRef<{ scrollToLine: (index: number) => void }>(null);
   const hasLoadedDraft = useRef(false);
 
-  // Синхронизация профиля, если он изменится извне (не обязательно, но хорошая практика)
   useEffect(() => {
     setUserProfile(initialProfile);
   }, [initialProfile]);
 
-  // Эффект для работы с черновиком (остался без изменений)
   useEffect(() => {
     if (hasLoadedDraft.current) return;
     hasLoadedDraft.current = true;
@@ -68,7 +66,6 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
     }
   }, []);
 
-  // Эффект для сохранения черновика (остался без изменений)
   useEffect(() => {
     try {
       if (lines.length > 0 || audioFileName) {
@@ -98,7 +95,6 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
     return false;
   }, [audioUrl, lines, showDraftNotice, allLinesSynced, noAudioMode, userProfile]);
 
-  // 3. УПРОЩЕНА ЛОГИКА СОХРАНЕНИЯ: теперь только для страницы профиля
   const handleProfileUpdate = async (updatedProfileData: Partial<Omit<User, 'uid' | 'email' | 'role'>>) => {
     const newProfile = { ...userProfile, ...updatedProfileData };
     setUserProfile(newProfile);
@@ -107,7 +103,7 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
       await setDoc(userDocRef, updatedProfileData, { merge: true });
     } catch (error) {
       console.error("Ошибка при обновлении профиля:", error);
-      setUserProfile(initialProfile); // В случае ошибки - откатываем к первоначальному состоянию
+      setUserProfile(initialProfile); 
       alert('Не удалось сохранить изменения. Попробуйте перезагрузить страницу.');
     }
   };
@@ -122,7 +118,6 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
     setShowDraftNotice(false);
   };
   
-  // Прочие обработчики без изменений
   const handleNoAudio = () => { setAudioUrl(null); setAudioFileName(null); setAudioDuration(0); setNoAudioMode(true); setActiveTab(Tab.Text); setShowDraftNotice(false); };
   const handleReset = () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute('src'); audioRef.current.load(); } if (audioUrl) { URL.revokeObjectURL(audioUrl); } setAudioUrl(null); setAudioFileName(null); setLines([]); setAudioDuration(0); setActiveTab(Tab.Audio); setIsFormattingHelperOpen(false); setShowDraftNotice(false); setNoAudioMode(false); localStorage.removeItem(DRAFT_KEY); };
   const handleConfirmReset = () => { handleReset(); setIsResetModalOpen(false); };
@@ -133,7 +128,6 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   const handleFixAll = (issueType: IssueType) => setLines(applyFixAll(lines, issueType));
   const handleProfileClick = () => setActiveTab(Tab.Profile);
 
-  // 4. УДАЛЕН УСЛОВНЫЙ РЕНДЕРИНГ: App всегда рендерит основной интерфейс
   const renderContent = () => {
     switch (activeTab) {
       case Tab.Audio: return <AudioUpload onAudioUpload={handleAudioUpload} audioFileName={audioFileName} onNoAudio={handleNoAudio} />;
@@ -148,11 +142,11 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-slate-900 text-slate-200 font-sans overflow-hidden">
-      <header className="py-4 px-6 bg-slate-800/70 backdrop-blur-sm border-b border-slate-700/50 shadow-md flex-shrink-0 flex justify-between items-center">
+    <div className="h-screen w-screen flex flex-col bg-[#5B86E5] text-white font-sans overflow-hidden">
+      <header className="relative z-10 py-4 px-6 bg-black/20 backdrop-blur-sm border-b border-white/10 shadow-md flex-shrink-0 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Zion Distribution</h1>
-          <p className="text-slate-400 text-sm">Построчный редактор и синхронизатор субтитров</p>
+          <ZionLogo />
+          <p className="text-gray-300 text-sm mt-1">Построчный редактор и синхронизатор субтитров</p>
         </div>
         <ProfileDropdown user={userProfile} onLogout={onLogout} onProfileClick={handleProfileClick} />
       </header>
@@ -161,7 +155,7 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
         <div className="flex justify-between items-center">
           <Tabs activeTab={activeTab} setActiveTab={setActiveTab} isTabDisabled={isTabDisabled} isAdmin={userProfile?.role === Role.Admin} />
           <div className="px-6">
-            <button onClick={() => setIsResetModalOpen(true)} className="px-4 py-2 bg-red-600/80 text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
+            <button onClick={() => setIsResetModalOpen(true)} className="px-4 py-2 bg-[#FF553E] text-white text-sm font-semibold rounded-lg hover:bg-[#ff7b6b] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#5B86E5]">
               Сброс
             </button>
           </div>

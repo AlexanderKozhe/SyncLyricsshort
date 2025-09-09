@@ -22,7 +22,6 @@ const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ isOpen, onClose, 
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Сбрасываем состояние при каждом открытии/закрытии
   useEffect(() => {
     if (isOpen) {
       setEmail('');
@@ -59,7 +58,6 @@ const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ isOpen, onClose, 
         throw new Error(data.message || 'Не удалось создать пользователя.');
       }
       
-      // Передаем данные наверх
       onUserRegistered({ email, password: data.password });
 
     } catch (err: any) {
@@ -78,24 +76,23 @@ const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ isOpen, onClose, 
   
   const renderContent = () => {
     if (registeredUserData) {
-      const credentials = `Логин: ${registeredUserData.email}
-Пароль: ${registeredUserData.password}`;
+      const credentials = `Логин: ${registeredUserData.email}\nПароль: ${registeredUserData.password}`;
       return (
         <div className="space-y-4">
-            <p className="text-slate-300">Пользователь успешно создан. Сохраните его данные для входа.</p>
-            <div className="bg-slate-900/50 p-4 rounded-md border border-slate-700 space-y-2">
+            <p className="text-gray-200">Пользователь успешно создан. Сохраните его данные для входа.</p>
+            <div className="bg-black/30 p-4 rounded-md border border-white/10 space-y-2">
               <div>
-                  <label className="text-xs font-medium text-slate-400">Логин</label>
-                  <p className="font-mono text-slate-200">{registeredUserData.email}</p>
+                  <label className="text-xs font-medium text-gray-400">Логин</label>
+                  <p className="font-mono text-gray-100">{registeredUserData.email}</p>
               </div>
               <div>
-                  <label className="text-xs font-medium text-slate-400">Временный пароль</label>
-                  <p className="font-mono text-slate-200">{registeredUserData.password}</p>
+                  <label className="text-xs font-medium text-gray-400">Временный пароль</label>
+                  <p className="font-mono text-gray-100">{registeredUserData.password}</p>
               </div>
             </div>
             <button 
               onClick={() => handleCopyToClipboard(credentials)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:opacity-50"
             >
               <CopyIcon copied={copied} className="w-5 h-5" />
               {copied ? 'Скопировано!' : 'Копировать данные'}
@@ -107,13 +104,13 @@ const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ isOpen, onClose, 
     return (
       <form onSubmit={(e) => {e.preventDefault(); handleRegister();}}>
           <div className="space-y-4">
-              <label htmlFor="email" className="block text-sm font-medium text-slate-400 -mb-2">Email будущего пользователя</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 -mb-2">Email будущего пользователя</label>
               <input
                   type="email"
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#FF553E]"
                   required
                   placeholder="user@example.com"
               />
@@ -127,12 +124,9 @@ const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ isOpen, onClose, 
     <Modal 
         isOpen={isOpen} 
         onClose={onClose}
-        // Действие кнопки зависит от того, есть ли данные
         onConfirm={registeredUserData ? onClose : handleRegister}
         title={registeredUserData ? 'Пользователь создан' : 'Зарегистрировать пользователя'}
-        // Текст меняется в зависимости от состояния
         confirmText={registeredUserData ? 'Отлично' : (loading ? 'Регистрация...' : 'Зарегистрировать')}
-        // Кнопка отмены не нужна после успеха
         showCancel={!registeredUserData}
         isConfirmDisabled={loading}
         isConfirmPrimary={!registeredUserData}

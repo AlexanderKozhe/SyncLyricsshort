@@ -1,3 +1,4 @@
+
 import React, { useRef, useImperativeHandle, forwardRef, useState, useCallback } from 'react';
 import SparklesIcon from './icons/SparklesIcon';
 import UploadIcon from './icons/UploadIcon';
@@ -46,7 +47,7 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
             } catch (error) {
                 alert(error instanceof Error ? error.message : 'Произошла ошибка при разборе файла.');
             }
-        } else { // assume .txt
+        } else { 
             onTextChange(fileContent);
         }
     };
@@ -59,7 +60,7 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
       handleFileUpload(file);
     }
     if (event.target) {
-      event.target.value = ''; // Reset for re-uploading same file
+      event.target.value = ''; 
     }
   };
   
@@ -84,23 +85,23 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
 
   if (hasText || showPasteArea) {
     return (
-      <div className="h-full flex flex-col bg-slate-800 rounded-lg">
-        <div className="flex justify-between items-center p-6 border-b border-slate-700/50">
+      <div className="h-full flex flex-col bg-black/20 rounded-lg">
+        <div className="flex justify-between items-center p-6 border-b border-white/10">
           <div>
-            <h2 className="text-xl font-semibold text-slate-200">Шаг 2: Вставьте и отредактируйте текст</h2>
-            <p className="text-slate-400 mt-1">Каждая строка будет отдельным элементом для синхронизации.</p>
+            <h2 className="text-xl font-semibold text-white">Шаг 2: Вставьте и отредактируйте текст</h2>
+            <p className="text-gray-300 mt-1">Каждая строка будет отдельным элементом для синхронизации.</p>
           </div>
           <div className="flex items-center gap-2">
             <button
                 onClick={handleReset}
-                className="whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
+                className="whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
                 title="Изменить источник текста"
             >
                 Изменить источник
             </button>
             <button
               onClick={onToggleHelper}
-              className="flex items-center gap-2 whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium transition-all duration-300 ease-in-out bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium transition-all duration-300 ease-in-out bg-black/20 text-white hover:bg-black/30"
               title="Помощник по форматированию"
             >
               <SparklesIcon />
@@ -113,9 +114,8 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
             ref={textareaRef}
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
-            placeholder="Вставьте ваш текст здесь.
-Каждая новая строка будет отдельным субтитром."
-            className="h-full w-full p-5 bg-slate-900 border border-slate-700 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 resize-none custom-scrollbar text-base"
+            placeholder="Вставьте ваш текст здесь.\nКаждая новая строка будет отдельным субтитром."
+            className="h-full w-full p-5 bg-black/20 border border-white/10 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] resize-none custom-scrollbar text-base"
           />
         </div>
       </div>
@@ -123,20 +123,20 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
   }
 
   return (
-    <div className="h-full flex flex-col items-center justify-center text-center bg-slate-800 rounded-lg p-8">
-      <h2 className="text-xl font-semibold mb-2 text-slate-200">Шаг 2: Добавьте текст</h2>
-      <p className="text-slate-400 mb-8 max-w-md">Вы можете загрузить текстовый файл или вставить текст вручную.</p>
+    <div className="h-full flex flex-col items-center justify-center text-center bg-black/20 rounded-lg p-8">
+      <h2 className="text-xl font-semibold mb-2 text-white">Шаг 2: Добавьте текст</h2>
+      <p className="text-gray-300 mb-8 max-w-md">Вы можете загрузить текстовый файл или вставить текст вручную.</p>
       
       <label
         htmlFor="text-file-input"
         onDragOver={onDragOver}
         onDrop={onDrop}
-        className="flex flex-col items-center justify-center w-full max-w-lg h-56 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-900/50 hover:bg-slate-700/50 transition-colors"
+        className="flex flex-col items-center justify-center w-full max-w-lg h-56 border-2 border-white/10 border-dashed rounded-lg cursor-pointer bg-black/10 hover:bg-black/20 transition-colors"
       >
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           <UploadIcon />
-          <p className="mb-2 text-sm text-slate-400"><span className="font-semibold text-sky-400">Нажмите для загрузки</span> или перетащите файл</p>
-          <p className="text-xs text-slate-500">.TXT или .TTML файл</p>
+          <p className="mb-2 text-sm text-gray-300"><span className="font-semibold text-[#FF553E]">Нажмите для загрузки</span> или перетащите файл</p>
+          <p className="text-xs text-gray-400">.TXT или .TTML файл</p>
         </div>
       </label>
       <input 
@@ -149,14 +149,14 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
       />
 
       <div className="my-6 flex items-center w-full max-w-lg">
-        <div className="flex-grow border-t border-slate-700"></div>
-        <span className="flex-shrink mx-4 text-slate-500 text-sm">ИЛИ</span>
-        <div className="flex-grow border-t border-slate-700"></div>
+        <div className="flex-grow border-t border-white/10"></div>
+        <span className="flex-shrink mx-4 text-gray-300 text-sm">ИЛИ</span>
+        <div className="flex-grow border-t border-white/10"></div>
       </div>
       
       <button
         onClick={() => setShowPasteArea(true)}
-        className="flex items-center justify-center gap-3 px-6 py-3 bg-slate-700 text-white font-semibold rounded-lg hover:bg-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-800"
+        className="flex items-center justify-center gap-3 px-6 py-3 bg-black/20 text-white font-semibold rounded-lg hover:bg-black/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF553E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#5B86E5]"
       >
         <PasteIcon />
         Вставить текст вручную

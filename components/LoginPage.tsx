@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 // FIX: Removed v9 modular import for `signInWithEmailAndPassword` which was causing an error.
 import { auth } from '../firebase';
+import SpinnerIcon from './icons/SpinnerIcon';
+import ZionLogo from './icons/ZionLogo';
 
 const getFirebaseErrorMessage = (errorCode: string): string => {
   switch (errorCode) {
@@ -42,17 +44,19 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-slate-200 p-4">
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#5B86E5] text-white p-4 font-sans">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Zion Distribution</h1>
-            <p className="text-slate-400">Вход в панель синхронизации</p>
+            <div className="flex justify-center mb-4">
+              <ZionLogo />
+            </div>
+            <p className="text-gray-300">Вход в панель синхронизации</p>
         </div>
 
-        <div className="bg-slate-800 p-8 rounded-lg shadow-xl border border-slate-700">
+        <div className="bg-black/20 backdrop-blur-sm border border-white/10 shadow-lg p-8 rounded-lg">
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                 Email
               </label>
               <input
@@ -63,12 +67,12 @@ const LoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 bg-slate-900 border border-slate-700 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                className="w-full p-3 bg-black/20 border border-white/20 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] transition"
               />
             </div>
 
             <div>
-              <label htmlFor="password"className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="password"className="block text-sm font-medium text-gray-300 mb-2">
                 Пароль
               </label>
               <input
@@ -79,7 +83,7 @@ const LoginPage: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 bg-slate-900 border border-slate-700 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                className="w-full p-3 bg-black/20 border border-white/20 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] transition"
               />
             </div>
             
@@ -89,9 +93,16 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-sky-500 transition disabled:bg-slate-600 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center h-11 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#FF553E] hover:bg-[#ff7b6b] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/20 focus:ring-[#FF553E] transition disabled:bg-red-400/50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Вход...' : 'Войти'}
+                {loading ? (
+                  <>
+                    <SpinnerIcon className="animate-spin h-5 w-5 text-white" />
+                    <span className="ml-2">Вход...</span>
+                  </>
+                ) : (
+                  <span>Войти</span>
+                )}
               </button>
             </div>
           </form>

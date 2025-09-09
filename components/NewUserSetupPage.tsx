@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
-import { User } from '../types'; // Используем наш типизированный User
+import { User } from '../types';
 import SpinnerIcon from './icons/SpinnerIcon';
+import ZionLogo from './icons/ZionLogo';
 
-// 1. ИСПРАВЛЕНЫ ПРОПСЫ: теперь они соответствуют App.tsx
 interface NewUserSetupPageProps {
   user: User;
   onSave: (data: { firstName: string; lastName: string; photoURL?: string }) => Promise<void>;
@@ -51,24 +51,16 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSave }) => 
     }
 
     try {
-      // Шаг 1: Повторная аутентификация пользователя
       const credential = EmailAuthProvider.credential(currentUser.email, tempPassword);
       await reauthenticateWithCredential(currentUser, credential);
 
-      // 2. ПРАВИЛЬНЫЙ ПОРЯДОК: СНАЧАЛА СОХРАНЯЕМ ДАННЫЕ В FIRESTORE
-      // Вызываем onSave, переданный из App.tsx
-      await onSave({ 
-        firstName, 
-        lastName, 
+      await onSave({
+        firstName,
+        lastName,
         photoURL: photoURL || ''
       });
 
-      // 3. ПОСЛЕ УСПЕШНОГО СОХРАНЕНИЯ: МЕНЯЕМ ПАРОЛЬ
-      // Это аннулирует старый токен, но данные уже в безопасности.
       await updatePassword(currentUser, newPassword);
-
-      // Перезагрузка страницы не нужна, т.к. App.tsx сам обновит состояние
-      // onSave уже обновил userProfile в App.tsx
 
     } catch (err: any) {
       console.error("Ошибка при настройке профиля:", err);
@@ -83,7 +75,7 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSave }) => 
         case 'auth/invalid-credential':
            errorMessage = 'Данные для входа неверны. Проверьте временный пароль.';
            break;
-        case 'permission-denied': // Firestore permission error
+        case 'permission-denied':
             errorMessage = 'Ошибка прав доступа при сохранении данных. Проверьте правила безопасности Firestore.';
             break;
         default:
@@ -97,89 +89,105 @@ const NewUserSetupPage: React.FC<NewUserSetupPageProps> = ({ user, onSave }) => 
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-200">
-      <div className="max-w-md w-full p-8 bg-slate-800 rounded-lg shadow-xl">
-        <h1 className="text-3xl font-bold mb-4 text-center">Завершение регистрации</h1>
-        <p className="text-slate-400 mb-6 text-center">Пожалуйста, укажите ваши данные и установите новый пароль.</p>
-        <form onSubmit={handleSetup}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <input
-              type="text"
-              placeholder="Имя"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-              required
-            />
-            <input
-              type="text"
-              placeholder="Фамилия"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <input
-              type="url"
-              placeholder="URL фотографии (необязательно)"
-              value={photoURL}
-              onChange={(e) => setPhotoURL(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-          <hr className="border-slate-600 my-6" />
-          <div className="mb-4">
-            <input
-              type="password"
-              placeholder="Временный пароль"
-              value={tempPassword}
-              onChange={(e) => setTempPassword(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <input
-              type="password"
-              placeholder="Новый пароль (минимум 6 символов)"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <input
-              type="password"
-              placeholder="Подтвердите пароль"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-              required
-            />
-          </div>
-          {error && <p className="text-red-400 text-sm text-center mb-4 bg-red-900/50 p-3 rounded-md">{error}</p>}
-          <div className="space-y-3">
-            <button
-              type="submit"
-              className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center disabled:bg-sky-800 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading && <SpinnerIcon className="mr-2" />}
-              Сохранить и войти
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 font-bold py-2 px-4 rounded-md transition-colors"
-              disabled={loading}
-            >
-              Выйти
-            </button>
-          </div>
-        </form>
+    <div className="min-h-screen w-screen flex flex-col items-center justify-center bg-[#5B86E5] text-white p-4 font-sans">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <ZionLogo />
+            </div>
+            <h1 className="text-2xl font-bold">Завершение регистрации</h1>
+            <p className="text-gray-300">Пожалуйста, укажите ваши данные и установите новый пароль.</p>
+        </div>
+
+        <div className="bg-black/20 backdrop-blur-sm border border-white/10 shadow-lg p-8 rounded-lg">
+          <form onSubmit={handleSetup} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="Имя"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full p-3 bg-black/20 border border-white/20 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] transition"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Фамилия"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full p-3 bg-black/20 border border-white/20 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] transition"
+                required
+              />
+            </div>
+            <div>
+              <input
+                type="url"
+                placeholder="URL фотографии (необязательно)"
+                value={photoURL}
+                onChange={(e) => setPhotoURL(e.target.value)}
+                className="w-full p-3 bg-black/20 border border-white/20 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] transition"
+              />
+            </div>
+            
+            <hr className="border-white/10" />
+
+            <div>
+              <input
+                type="password"
+                placeholder="Временный пароль"
+                value={tempPassword}
+                onChange={(e) => setTempPassword(e.target.value)}
+                className="w-full p-3 bg-black/20 border border-white/20 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] transition"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="password"
+                placeholder="Новый пароль"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full p-3 bg-black/20 border border-white/20 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] transition"
+                required
+              />
+              <input
+                type="password"
+                placeholder="Подтвердите пароль"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full p-3 bg-black/20 border border-white/20 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] transition"
+                required
+              />
+            </div>
+
+            {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+            
+            <div className="pt-2 space-y-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center h-11 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#FF553E] hover:bg-[#ff7b6b] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/20 focus:ring-[#FF553E] transition disabled:bg-red-400/50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <SpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5" />
+                    <span>Сохранение...</span>
+                  </>
+                ) : (
+                  <span>Сохранить и войти</span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full text-center text-sm text-gray-300 hover:text-white hover:bg-black/20 py-2 rounded-lg transition"
+                disabled={loading}
+              >
+                Выйти
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

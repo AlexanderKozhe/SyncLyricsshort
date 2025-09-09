@@ -8,6 +8,7 @@ import App from '../App';
 import LoginPage from './LoginPage';
 import NewUserSetupPage from './NewUserSetupPage';
 import SpinnerIcon from './icons/SpinnerIcon';
+import ZionLogo from './icons/ZionLogo';
 
 const AuthGate: React.FC = () => {
   const [authStatus, setAuthStatus] = useState<'loading' | 'authed' | 'unauthed'>('loading');
@@ -19,8 +20,6 @@ const AuthGate: React.FC = () => {
     if (userDoc.exists()) {
       return { uid: firebaseUser.uid, ...userDoc.data() } as User;
     }
-    // Если документа нет, это аномалия, т.к. админ должен был его создать.
-    // Возвращаем null, чтобы система разлогинила пользователя.
     console.error("AuthGate: Документ пользователя не найден в Firestore, хотя аутентификация пройдена.");
     return null;
   }, []);
@@ -35,7 +34,6 @@ const AuthGate: React.FC = () => {
             setUserProfile(profile);
             setAuthStatus('authed');
           } else {
-            // Профиль не найден, разлогиниваем
             auth.signOut(); 
           }
         } catch (error) {
@@ -51,7 +49,6 @@ const AuthGate: React.FC = () => {
     return () => unsubscribe();
   }, [fetchUserProfile]);
 
-  // 2. ИСПРАВЛЕНО: Функция теперь также устанавливает isNewUser: false
   const handleProfileSave = async (data: { firstName: string; lastName: string; photoURL?: string }) => {
     if (!userProfile) throw new Error("Пользователь не найден для сохранения");
 
@@ -62,7 +59,7 @@ const AuthGate: React.FC = () => {
       firstName: data.firstName, 
       lastName: data.lastName, 
       photoURL: data.photoURL || null,
-      isNewUser: false // Явно указываем флаг для снятия
+      isNewUser: false
     }, { merge: true });
 
     setUserProfile(updatedProfile);
@@ -75,15 +72,17 @@ const AuthGate: React.FC = () => {
 
   if (authStatus === 'loading' || (authStatus === 'authed' && !userProfile)) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-slate-200">
-        <SpinnerIcon />
-        <p className="mt-4 text-lg">Загрузка профиля...</p>
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#5B86E5] text-white font-sans">
+        <div className="flex flex-col items-center">
+          <ZionLogo />
+          <SpinnerIcon className="animate-spin h-8 w-8 text-white mt-8" />
+          <p className="mt-4 text-lg">Загрузка профиля...</p>
+        </div>
       </div>
     );
   }
 
   if (authStatus === 'authed' && userProfile) {
-    // 1. ИСПРАВЛЕНО: Проверяем флаг isNewUser, а не имя/фамилию
     if (userProfile.isNewUser) {
       return <NewUserSetupPage user={userProfile} onSave={handleProfileSave} />;
     }

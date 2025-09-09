@@ -43,33 +43,33 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onUpdate }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-slate-800 rounded-xl shadow-md overflow-hidden md:max-w-2xl">
+    <div className="max-w-md mx-auto bg-black/20 rounded-xl shadow-md overflow-hidden md:max-w-2xl border border-white/10">
       <div className="md:flex">
         <div className="w-full p-8">
           <div className="flex justify-center md:justify-start">
-            <img className="w-32 h-32 rounded-full ring-4 ring-sky-500" src={formData.photoURL || `https://ui-avatars.com/api/?name=${formData.firstName}+${formData.lastName}&background=random`} alt="User avatar" />
+            <img className="w-32 h-32 rounded-full ring-4 ring-[#FF553E]" src={formData.photoURL || `https://ui-avatars.com/api/?name=${formData.firstName}+${formData.lastName}&background=random`} alt="User avatar" />
           </div>
 
           <div className="text-center md:text-left mt-4">
             {isEditing ? (
               <div className="space-y-4">
-                <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white" placeholder="Имя" />
-                <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white" placeholder="Фамилия" />
-                <input type="text" name="photoURL" value={formData.photoURL || ''} onChange={handleInputChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white" placeholder="URL аватара" />
+                <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:ring-[#FF553E] focus:border-[#FF553E]" placeholder="Имя" />
+                <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:ring-[#FF553E] focus:border-[#FF553E]" placeholder="Фамилия" />
+                <input type="text" name="photoURL" value={formData.photoURL || ''} onChange={handleInputChange} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:ring-[#FF553E] focus:border-[#FF553E]" placeholder="URL аватара" />
                 <div className="flex justify-end gap-2">
-                  <button onClick={handleSave} className="px-4 py-2 bg-sky-600 text-white text-sm font-semibold rounded-lg hover:bg-sky-500">Сохранить</button>
-                  <button onClick={handleCancel} className="px-4 py-2 bg-slate-700 text-white text-sm font-semibold rounded-lg hover:bg-slate-600">Отмена</button>
+                  <button onClick={handleSave} className="px-4 py-2 bg-[#FF553E] text-white text-sm font-semibold rounded-lg hover:bg-[#ff7b6b] transition-colors">Сохранить</button>
+                  <button onClick={handleCancel} className="px-4 py-2 bg-white/10 text-white text-sm font-semibold rounded-lg hover:bg-white/20 transition-colors">Отмена</button>
                 </div>
               </div>
             ) : (
               <div>
                 <div className="flex items-center justify-center md:justify-start">
                   <p className="text-2xl font-bold text-white">{user.firstName} {user.lastName}</p>
-                  <button onClick={() => setIsEditing(true)} className="ml-4 text-slate-400 hover:text-white">
+                  <button onClick={() => setIsEditing(true)} className="ml-4 text-gray-400 hover:text-white">
                     <PencilIcon />
                   </button>
                 </div>
-                <p className="text-slate-400">{getRoleDisplayName(user.role)}</p>
+                <p className="text-gray-400">{getRoleDisplayName(user.role)}</p>
               </div>
             )}
           </div>
