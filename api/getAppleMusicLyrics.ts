@@ -11,13 +11,28 @@ function decodeHtmlEntities(text: string): string {
                .replace(/&#39;/g, "'");
 }
 
-// Helper to convert TTML time (HH:MM:SS.mmm) to total seconds
+// Helper to convert various TTML time formats (e.g., H:M:S.ms, M:S.ms, S.ms) to total seconds
 function ttmlTimeToSeconds(time: string): number {
-    const match = time.match(/(\d{2}):(\d{2}):(\d{2})\.(\d{3})/);
-    if (!match) return 0;
-    const [, hours, minutes, seconds, milliseconds] = match.map(Number);
-    return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+    const timeParts = time.split(':');
+    let totalSeconds = 0;
+    
+    // Handles formats like SS.mmm, MM:SS.mmm, and HH:MM:SS.mmm
+    try {
+        if (timeParts.length === 1) { // SS.mmm
+            totalSeconds = parseFloat(timeParts[0]);
+        } else if (timeParts.length === 2) { // MM:SS.mmm
+            totalSeconds = (parseInt(timeParts[0], 10) * 60) + parseFloat(timeParts[1]);
+        } else if (timeParts.length === 3) { // HH:MM:SS.mmm
+            totalSeconds = (parseInt(timeParts[0], 10) * 3600) + (parseInt(timeParts[1], 10) * 60) + parseFloat(timeParts[2]);
+        }
+    } catch (error) {
+        console.error(`Could not parse time: ${time}`, error);
+        return 0;
+    }
+
+    return isNaN(totalSeconds) ? 0 : totalSeconds;
 }
+
 
 // Helper to convert total seconds to LRC time ([mm:ss.xx])
 function secondsToLrcTime(timeInSeconds: number): string {
