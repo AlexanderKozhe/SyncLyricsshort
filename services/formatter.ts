@@ -31,14 +31,14 @@ export const formatLRCTime = (seconds: number): string => {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`;
 };
 
+// XML-экранирование БЕЗ замены апострофа
 export const escapeXml = (unsafe: string): string => {
-    return unsafe.replace(/[<>&'"]/g, (c) => {
+    return unsafe.replace(/[<>&]/g, (c) => {
         switch (c) {
             case '<': return '&lt;';
             case '>': return '&gt;';
             case '&': return '&amp;';
-            case '\'': return '&apos;';
-            case '"': return '&quot;';
+            // Апостроф (') и кавычки (") больше не заменяются
             default: return c;
         }
     });
