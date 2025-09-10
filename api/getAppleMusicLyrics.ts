@@ -1,7 +1,7 @@
 import { get } from '@vercel/edge-config';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const appleMusicUrlRegex = /music\.apple\.com\/([a-z]{2})\/album\/[^/]+\/(\d+)/;
+const appleMusicUrlRegex = /music\.apple\.com\/([a-z]{2})\/(song|album)\/[^/]+\/(\d+)/;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!match) {
     return res.status(400).json({ error: 'Неверный формат URL Apple Music.' });
   }
-  const [, country, songId] = match;
+  const [, country, , songId] = match; // a song or an album
 
   try {
     const devToken = await get('APPLE_DEV_TOKEN');
