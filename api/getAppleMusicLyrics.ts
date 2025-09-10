@@ -1,6 +1,83 @@
 import { get } from '@vercel/edge-config';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+// Helper function to decode HTML entities
+function decodeHtmlEntities(text: string): string {
+    return text.replace(/&amp;/g, '&')
+               .replace(/&lt;/g, '<')
+               .replace(/&gt;/g, '>')
+               .replace(/&quot;/g, '"')
+               .replace(/&#39;/g, "'");
+}
+
+// Helper function to convert TTML time (HH:MM:SS.mmm) to LRC time ([mm:ss.xx])
+function formatTtmlTimeToLrc(time: string): string {
+  const timeRegex = /(\d{2}):(\d{2}):(\d{2})\.(\d{3})/;
+  const match = time.match(timeRegex);
+  if (!match) return '[00:00.00]';
+
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const seconds = parseInt(match[3], 10);
+  const milliseconds = parseInt(match[4], 10);
+
+  const totalMinutes = hours * 60 + minutes;
+  const centiseconds = Math.floor(milliseconds / 10);
+
+  const paddedMinutes = String(totalMinutes).padStart(2, '0');
+  const paddedSeconds = String(seconds).padStart(2, '0');
+  const paddedCentiseconds = String(centiseconds).padStart(2, '0');
+
+  return `[${paddedMinutes}:${paddedSeconds}.${paddedCentiseconds}]`;
+}
+
+// Main converter function from TTML to LRC and TXT
+function convertTtml(ttml: string): { lrc: string; txt: string } {
+  const lines: { time: string; text: string }[] = [];
+  const lyricLineRegex = /<p begin="([^"]+)"[^>]*>([\s\S]*?)<\/p>/g;
+  let match;
+
+  while ((match = lyricLineRegex.exec(ttml)) !== null) {
+    const time = match[1];
+    const rawText = match[2];
+
+    // Handle <br> tags for multiline lyrics within one timestamp
+    const textWithNewlines = rawText.replace(/<br\s*\/?>/gi, '\n');
+    // Strip all remaining HTML tags and decode entities
+    const cleanText = decodeHtmlEntities(textWithNewlines.replace(/<[^>]+>/g, '').trim());
+    
+    lines.push({ time, text: cleanText });
+  }
+
+  // Fallback if no timed lines were found (e.g., plain text lyrics)
+  if (lines.length === 0) {
+    const plainText = decodeHtmlEntities(
+        ttml
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<p[^>]*>/gi, '')
+            .replace(/<\/p>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\n\s*\n/g, '\n')
+            .trim()
+    );
+    return { lrc: '', txt: plainText };
+  }
+
+  // For LRC, join multiline text with spaces as the standard is one line per timestamp.
+  const lrcLines = lines.map(line => {
+    const lrcText = line.text.replace(/\n/g, ' ');
+    return `${formatTtmlTimeToLrc(line.time)}${lrcText}`;
+  });
+
+  // For TXT, preserve the newlines.
+  const txtLines = lines.map(line => line.text);
+
+  return {
+    lrc: lrcLines.join('\n'),
+    txt: txtLines.join('\n'),
+  };
+}
+
 const appleMusicUrlRegex = /music\.apple\.com\/([a-z]{2})\/(song|album)\/[^/]+\/(\d+)/;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -54,9 +131,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Текст песни не найден для этого трека.' });
     }
 
+    const { lrc, txt } = convertTtml(ttml);
     const formattedTtml = ttml.replace(/>/g, '>\n');
 
-    return res.status(200).json({ lyrics: formattedTtml });
+    return res.status(200).json({ ttml: formattedTtml, lrc, txt });
 
   } catch (error) {
     console.error('Внутренняя ошибка сервера:', error);
