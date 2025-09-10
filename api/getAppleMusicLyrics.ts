@@ -45,7 +45,10 @@ function convertTtml(ttml: string): { lrc: string; txt: string } {
     const lyricLineRegex = /<p begin="([^"]+)" end="([^"]+)"[^>]*>([\s\S]*?)<\/p>/g;
     let match;
 
-    while ((match = lyricLineRegex.exec(ttml)) !== null) {
+    // First, remove the songwriters block entirely, regardless of sync
+    const ttmlWithoutSongwriters = ttml.replace(/<songwriters>[\s\S]*?<\/songwriters>/gi, '');
+
+    while ((match = lyricLineRegex.exec(ttmlWithoutSongwriters)) !== null) {
         const [, beginStr, endStr, rawText] = match;
 
         const textWithNewlines = rawText.replace(/<br\s*\/?>/gi, '\n');
@@ -59,7 +62,16 @@ function convertTtml(ttml: string): { lrc: string; txt: string } {
     }
 
     if (timedLines.length === 0) {
-        const plainText = decodeHtmlEntities(ttml.replace(/<br\s*\/?>/gi, '\n').replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n\s*\n/g, '\n').trim());
+        // Fallback for non-synced lyrics
+        const plainText = decodeHtmlEntities(
+            ttmlWithoutSongwriters
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<p[^>]*>/gi, '')
+                .replace(/<\/p>/gi, '\n')
+                .replace(/<[^>]+>/g, '') // Clean up any remaining tags
+                .replace(/\n\s*\n/g, '\n') // Collapse multiple newlines
+                .trim()
+        );
         return { lrc: '', txt: plainText };
     }
     
@@ -78,18 +90,15 @@ function convertTtml(ttml: string): { lrc: string; txt: string } {
         }
         lrcOutputLines.push(`${secondsToLrcTime(currentLine.begin)}${lrcText}`);
 
-        // Check for long pause after the current line
         const nextLine = timedLines[i + 1];
         if (nextLine) {
             const pauseDuration = nextLine.begin - currentLine.end;
             if (pauseDuration >= 13) {
-                // Add an empty tag at the end of the current line's time
                 lrcOutputLines.push(`${secondsToLrcTime(currentLine.end)}`);
             }
         }
     }
 
-    // Add the final empty tag at the end time of the last line
     const lastLine = timedLines[timedLines.length - 1];
     if (lastLine) {
         const lastTextUpper = lastLine.text.trim().toUpperCase();
