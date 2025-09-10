@@ -1,3 +1,4 @@
+
 import { get } from '@vercel/edge-config';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -10,79 +11,99 @@ function decodeHtmlEntities(text: string): string {
                .replace(/&#39;/g, "'");
 }
 
-// Helper function to convert TTML time (HH:MM:SS.mmm) to LRC time ([mm:ss.xx])
-function formatTtmlTimeToLrc(time: string): string {
-  const timeRegex = /(\d{2}):(\d{2}):(\d{2})\.(\d{3})/;
-  const match = time.match(timeRegex);
-  if (!match) return '[00:00.00]';
+// Helper to convert TTML time (HH:MM:SS.mmm) to total seconds
+function ttmlTimeToSeconds(time: string): number {
+    const match = time.match(/(\d{2}):(\d{2}):(\d{2})\.(\d{3})/);
+    if (!match) return 0;
+    const [, hours, minutes, seconds, milliseconds] = match.map(Number);
+    return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+}
 
-  const hours = parseInt(match[1], 10);
-  const minutes = parseInt(match[2], 10);
-  const seconds = parseInt(match[3], 10);
-  const milliseconds = parseInt(match[4], 10);
+// Helper to convert total seconds to LRC time ([mm:ss.xx])
+function secondsToLrcTime(timeInSeconds: number): string {
+    if (isNaN(timeInSeconds) || timeInSeconds < 0) return '[00:00.00]';
 
-  const totalMinutes = hours * 60 + minutes;
-  const centiseconds = Math.floor(milliseconds / 10);
+    const totalMilliseconds = Math.round(timeInSeconds * 1000);
+    const totalCentiseconds = Math.floor(totalMilliseconds / 10);
+    
+    const minutes = Math.floor(totalCentiseconds / 6000);
+    const remainingCentiseconds = totalCentiseconds % 6000;
+    
+    const seconds = Math.floor(remainingCentiseconds / 100);
+    const centiseconds = remainingCentiseconds % 100;
 
-  const paddedMinutes = String(totalMinutes).padStart(2, '0');
-  const paddedSeconds = String(seconds).padStart(2, '0');
-  const paddedCentiseconds = String(centiseconds).padStart(2, '0');
+    const paddedMinutes = String(minutes).padStart(2, '0');
+    const paddedSeconds = String(seconds).padStart(2, '0');
+    const paddedCentiseconds = String(centiseconds).padStart(2, '0');
 
-  return `[${paddedMinutes}:${paddedSeconds}.${paddedCentiseconds}]`;
+    return `[${paddedMinutes}:${paddedSeconds}.${paddedCentiseconds}]`;
 }
 
 // Main converter function from TTML to LRC and TXT
 function convertTtml(ttml: string): { lrc: string; txt: string } {
-  const lines: { time: string; text: string }[] = [];
-  const lyricLineRegex = /<p begin="([^"]+)"[^>]*>([\s\S]*?)<\/p>/g;
-  let match;
+    const timedLines: { begin: number; end: number; text: string }[] = [];
+    const lyricLineRegex = /<p begin="([^"]+)" end="([^"]+)"[^>]*>([\s\S]*?)<\/p>/g;
+    let match;
 
-  while ((match = lyricLineRegex.exec(ttml)) !== null) {
-    const time = match[1];
-    const rawText = match[2];
+    while ((match = lyricLineRegex.exec(ttml)) !== null) {
+        const [, beginStr, endStr, rawText] = match;
 
-    // Handle <br> tags for multiline lyrics within one timestamp
-    const textWithNewlines = rawText.replace(/<br\s*\/?>/gi, '\n');
-    // Strip all remaining HTML tags and decode entities
-    const cleanText = decodeHtmlEntities(textWithNewlines.replace(/<[^>]+>/g, '').trim());
-    
-    lines.push({ time, text: cleanText });
-  }
+        const textWithNewlines = rawText.replace(/<br\s*\/?>/gi, '\n');
+        const cleanText = decodeHtmlEntities(textWithNewlines.replace(/<[^>]+>/g, '').trim());
 
-  // Fallback if no timed lines were found (e.g., plain text lyrics)
-  if (lines.length === 0) {
-    const plainText = decodeHtmlEntities(
-        ttml
-            .replace(/<br\s*\/?>/gi, '\n')
-            .replace(/<p[^>]*>/gi, '')
-            .replace(/<\/p>/gi, '\n')
-            .replace(/<[^>]+>/g, '')
-            .replace(/\n\s*\n/g, '\n')
-            .trim()
-    );
-    return { lrc: '', txt: plainText };
-  }
+        timedLines.push({
+            begin: ttmlTimeToSeconds(beginStr),
+            end: ttmlTimeToSeconds(endStr),
+            text: cleanText,
+        });
+    }
 
-  // Convert to LRC, applying the special logic for instrumental/end tags
-  const lrcLines = lines.map(line => {
-    let lrcText = line.text.replace(/\n/g, ' '); // LRC standard is one line per timestamp
-    const upperText = lrcText.trim().toUpperCase();
-
-    if (upperText === '#INSTRUMENTAL' || upperText === 'END') {
-        lrcText = '';
+    if (timedLines.length === 0) {
+        const plainText = decodeHtmlEntities(ttml.replace(/<br\s*\/?>/gi, '\n').replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n\s*\n/g, '\n').trim());
+        return { lrc: '', txt: plainText };
     }
     
-    return `${formatTtmlTimeToLrc(line.time)}${lrcText}`;
-  });
+    timedLines.sort((a, b) => a.begin - b.begin);
 
-  // For TXT, preserve the newlines.
-  const txtLines = lines.map(line => line.text);
+    const lrcOutputLines: string[] = [];
+    const txtLines: string[] = timedLines.map(line => line.text);
 
-  return {
-    lrc: lrcLines.join('\n'),
-    txt: txtLines.join('\n'),
-  };
+    for (let i = 0; i < timedLines.length; i++) {
+        const currentLine = timedLines[i];
+
+        let lrcText = currentLine.text.replace(/\n/g, ' ');
+        const upperText = lrcText.trim().toUpperCase();
+        if (upperText === '#INSTRUMENTAL' || upperText === 'END') {
+            lrcText = '';
+        }
+        lrcOutputLines.push(`${secondsToLrcTime(currentLine.begin)}${lrcText}`);
+
+        // Check for long pause after the current line
+        const nextLine = timedLines[i + 1];
+        if (nextLine) {
+            const pauseDuration = nextLine.begin - currentLine.end;
+            if (pauseDuration >= 13) {
+                // Add an empty tag at the end of the current line's time
+                lrcOutputLines.push(`${secondsToLrcTime(currentLine.end)}`);
+            }
+        }
+    }
+
+    // Add the final empty tag at the end time of the last line
+    const lastLine = timedLines[timedLines.length - 1];
+    if (lastLine) {
+        const lastTextUpper = lastLine.text.trim().toUpperCase();
+        if (lastTextUpper !== 'END') {
+             lrcOutputLines.push(`${secondsToLrcTime(lastLine.end)}`);
+        }
+    }
+
+    return {
+        lrc: lrcOutputLines.join('\n'),
+        txt: txtLines.join('\n'),
+    };
 }
+
 
 const appleMusicUrlRegex = /music\.apple\.com\/([a-z]{2})\/(song|album)\/[^/]+\/(\d+)/;
 
@@ -94,14 +115,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { url } = req.body;
   if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: '\"url\" является обязательным полем.' });
+    return res.status(400).json({ error: '"url" является обязательным полем.' });
   }
 
   const match = url.match(appleMusicUrlRegex);
   if (!match) {
     return res.status(400).json({ error: 'Неверный формат URL Apple Music.' });
   }
-  const [, country, , songId] = match; // a song or an album
+  const [, country, , songId] = match;
 
   try {
     const devToken = await get('APPLE_DEV_TOKEN');
