@@ -1,17 +1,16 @@
-
-// /api/gemini.ts - Используем Vercel Edge Config и NextResponse
+// /api/gemini.ts - Используем Vercel Edge Config
 import { get } from '@vercel/edge-config';
-import { NextRequest, NextResponse } from 'next/server';
 
 export const config = {
   runtime: 'edge', // Обязательно для работы с Edge Config
 };
 
-export default async function handler(req: NextRequest) {
+export default async function handler(req) {
+  // Используем `Request` объект вместо `VercelRequest` в edge-runtime
   if (req.method !== 'POST') {
-    return NextResponse.json({ error: `Method ${req.method} Not Allowed` }, {
+    return new Response(JSON.stringify({ error: `Method ${req.method} Not Allowed` }), {
       status: 405,
-      headers: { 'Allow': 'POST' },
+      headers: { 'Allow': 'POST', 'Content-Type': 'application/json' },
     });
   }
 
@@ -20,16 +19,18 @@ export default async function handler(req: NextRequest) {
     const apiKey = await get('GEMINI_API_KEY');
     if (!apiKey) {
       console.error("FATAL: Не удалось получить GEMINI_API_KEY из Vercel Edge Config.");
-      return NextResponse.json({ error: 'Ошибка конфигурации сервера: API-ключ не найден.' }, {
+      return new Response(JSON.stringify({ error: 'Ошибка конфигурации сервера: API-ключ не найден.' }), {
         status: 500,
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
     // 2. Получаем prompt из тела запроса
     const { prompt: userText } = await req.json();
     if (!userText) {
-      return NextResponse.json({ error: '"prompt" является обязательным полем.' }, {
+      return new Response(JSON.stringify({ error: '"prompt" является обязательным полем.' }), {
         status: 400,
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
@@ -47,7 +48,7 @@ export default async function handler(req: NextRequest) {
 ${userText}
 ---`;
 
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     // 4. Отправляем запрос к Google Gemini
     const geminiResponse = await fetch(API_URL, {
@@ -63,38 +64,44 @@ ${userText}
     const responseData = await geminiResponse.json();
 
     // 5. Обрабатываем ошибки от Gemini API
-    if (!geminiResponse.ok || !responseData.candidates) {
+    if (!geminiResponse.ok || responseData.error) {
       console.error("Ошибка от Gemini API:", responseData.error);
-      return NextResponse.json({ 
+      return new Response(JSON.stringify({ 
         error: "Ошибка при обращении к сервису ИИ.",
         details: responseData.error?.message || "Причина не указана."
-      }, {
+      }), {
         status: geminiResponse.status || 500,
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
     // 6. Извлекаем и ОБРАБАТЫВАЕМ успешный ответ
     let text = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (typeof text !== 'string') {
-        return NextResponse.json({ error: 'Не удалось извлечь текст из ответа ИИ.' }, {
+    if (!text) {
+        return new Response(JSON.stringify({ error: 'Не удалось извлечь текст из ответа ИИ.' }), {
             status: 500,
+            headers: { 'Content-Type': 'application/json' },
         });
     }
     
     // Дополнительная защита: обрезаем лишние пробелы и переносы по краям
     text = text.trim();
 
-    return NextResponse.json({ text });
+    return new Response(JSON.stringify({ text }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
     // 7. Общий обработчик ошибок
     console.error('Критическая ошибка в Edge Function:', error);
     const details = (error instanceof Error) ? error.message : String(error);
-    return NextResponse.json({ 
+    return new Response(JSON.stringify({ 
       error: 'Произошла внутренняя ошибка сервера.',
       details: details
-    }, {
+    }), {
         status: 500,
+        headers: { 'Content-Type': 'application/json' },
     });
   }
 }
