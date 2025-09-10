@@ -1,34 +1,23 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
-    "module": "ESNext",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "skipLibCheck": true,
-    "types": [
-      "node"
-    ],
-    // ИЗМЕНЕНО: bundler -> node для лучшей совместимости с Vercel
-    "moduleResolution": "node", 
-    "allowSyntheticDefaultImports": true, // ДОБАВЛЕНО: для совместимости модулей
-    "isolatedModules": true,
-    "moduleDetection": "force",
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
-    "allowImportingTsExtensions": true,
-    "noEmit": true
+      "@/*": ["./*"]
+    }
   },
-  // ДОБАВЛЕНО: Явное указание, какие папки включать в компиляцию,
-  // чтобы `api` папка точно была обработана.
-  "include": ["src", "components", "services", "types", "api"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
 }
