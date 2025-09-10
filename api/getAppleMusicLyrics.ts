@@ -1,21 +1,22 @@
 import { get } from '@vercel/edge-config';
-import { NextRequest, NextResponse } from 'next/server.js';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 const appleMusicUrlRegex = /music\.apple\.com\/([a-z]{2})\/album\/[^/]+\/(\d+)/;
 
-export default async function handler(req: NextRequest) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return new Response(`Method ${req.method} Not Allowed`, { status: 405, headers: { Allow: 'POST' } });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  const { url } = await req.json();
+  const { url } = req.body;
   if (!url || typeof url !== 'string') {
-    return NextResponse.json({ error: '\"url\" является обязательным полем.' }, { status: 400 });
+    return res.status(400).json({ error: '\"url\" является обязательным полем.' });
   }
 
   const match = url.match(appleMusicUrlRegex);
   if (!match) {
-    return NextResponse.json({ error: 'Неверный формат URL Apple Music.' }, { status: 400 });
+    return res.status(400).json({ error: 'Неверный формат URL Apple Music.' });
   }
   const [, country, songId] = match;
 
@@ -25,7 +26,7 @@ export default async function handler(req: NextRequest) {
 
     if (!devToken || !mediaUserToken) {
       console.error('Переменные окружения APPLE_DEV_TOKEN или APPLE_MEDIA_USER_TOKEN не установлены.');
-      return NextResponse.json({ error: 'Ошибка конфигурации сервера.' }, { status: 500 });
+      return res.status(500).json({ error: 'Ошибка конфигурации сервера.' });
     }
 
     const appleApiUrl = `https://amp-api.music.apple.com/v1/catalog/${country}/songs/${songId}/lyrics`;
@@ -43,22 +44,22 @@ export default async function handler(req: NextRequest) {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`Ошибка от API Apple: ${response.status}`, errorBody);
-      return NextResponse.json({ error: `Ошибка при запросе к Apple Music: ${response.statusText}` }, { status: response.status });
+      return res.status(response.status).json({ error: `Ошибка при запросе к Apple Music: ${response.statusText}` });
     }
 
     const appleData = await response.json();
 
     const ttml = appleData?.data?.[0]?.attributes?.ttml;
     if (!ttml) {
-      return NextResponse.json({ error: 'Текст песни не найден для этого трека.' }, { status: 404 });
+      return res.status(404).json({ error: 'Текст песни не найден для этого трека.' });
     }
 
     const formattedTtml = ttml.replace(/>/g, '>\n');
 
-    return NextResponse.json({ lyrics: formattedTtml }, { status: 200 });
+    return res.status(200).json({ lyrics: formattedTtml });
 
   } catch (error) {
     console.error('Внутренняя ошибка сервера:', error);
-    return NextResponse.json({ error: 'Произошла внутренняя ошибка сервера.' }, { status: 500 });
+    return res.status(500).json({ error: 'Произошла внутренняя ошибка сервера.' });
   }
 }
