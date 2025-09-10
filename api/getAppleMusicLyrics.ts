@@ -2,31 +2,31 @@
 import { get } from '@vercel/edge-config';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Helper function to decode HTML entities
+// Вспомогательная функция для декодирования HTML-сущностей
 function decodeHtmlEntities(text: string): string {
     return text.replace(/&amp;/g, '&')
                .replace(/&lt;/g, '<')
                .replace(/&gt;/g, '>')
                .replace(/&quot;/g, '"')
-               .replace(/&#39;/g, "'");
+               .replace(/&#39;/g, "'")
+               .replace(/&apos;/g, "'"); // Добавлена обработка &apos;
 }
 
-// Helper to convert various TTML time formats (e.g., H:M:S.ms, M:S.ms, S.ms) to total seconds
+// Вспомогательная функция для конвертации времени TTML в секунды
 function ttmlTimeToSeconds(time: string): number {
     const timeParts = time.split(':');
     let totalSeconds = 0;
     
-    // Handles formats like SS.mmm, MM:SS.mmm, and HH:MM:SS.mmm
     try {
-        if (timeParts.length === 1) { // SS.mmm
+        if (timeParts.length === 1) { // Формат: SS.mmm
             totalSeconds = parseFloat(timeParts[0]);
-        } else if (timeParts.length === 2) { // MM:SS.mmm
+        } else if (timeParts.length === 2) { // Формат: MM:SS.mmm
             totalSeconds = (parseInt(timeParts[0], 10) * 60) + parseFloat(timeParts[1]);
-        } else if (timeParts.length === 3) { // HH:MM:SS.mmm
+        } else if (timeParts.length === 3) { // Формат: HH:MM:SS.mmm
             totalSeconds = (parseInt(timeParts[0], 10) * 3600) + (parseInt(timeParts[1], 10) * 60) + parseFloat(timeParts[2]);
         }
     } catch (error) {
-        console.error(`Could not parse time: ${time}`, error);
+        console.error(`Ошибка парсинга времени: ${time}`, error);
         return 0;
     }
 
@@ -34,7 +34,7 @@ function ttmlTimeToSeconds(time: string): number {
 }
 
 
-// Helper to convert total seconds to LRC time ([mm:ss.xx])
+// Вспомогательная функция для конвертации секунд в формат времени LRC
 function secondsToLrcTime(timeInSeconds: number): string {
     if (isNaN(timeInSeconds) || timeInSeconds < 0) return '[00:00.00]';
 
@@ -54,13 +54,12 @@ function secondsToLrcTime(timeInSeconds: number): string {
     return `[${paddedMinutes}:${paddedSeconds}.${paddedCentiseconds}]`;
 }
 
-// Main converter function from TTML to LRC and TXT
+// Основная функция конвертации из TTML в LRC и TXT
 function convertTtml(ttml: string): { lrc: string; txt: string } {
     const timedLines: { begin: number; end: number; text: string }[] = [];
     const lyricLineRegex = /<p begin="([^"]+)" end="([^"]+)"[^>]*>([\s\S]*?)<\/p>/g;
     let match;
 
-    // First, remove the songwriters block entirely, regardless of sync
     const ttmlWithoutSongwriters = ttml.replace(/<songwriters>[\s\S]*?<\/songwriters>/gi, '');
 
     while ((match = lyricLineRegex.exec(ttmlWithoutSongwriters)) !== null) {
@@ -77,14 +76,13 @@ function convertTtml(ttml: string): { lrc: string; txt: string } {
     }
 
     if (timedLines.length === 0) {
-        // Fallback for non-synced lyrics
         const plainText = decodeHtmlEntities(
             ttmlWithoutSongwriters
                 .replace(/<br\s*\/?>/gi, '\n')
                 .replace(/<p[^>]*>/gi, '')
                 .replace(/<\/p>/gi, '\n')
-                .replace(/<[^>]+>/g, '') // Clean up any remaining tags
-                .replace(/\n\s*\n/g, '\n') // Collapse multiple newlines
+                .replace(/<[^>]+>/g, '')
+                .replace(/\n\s*\n/g, '\n')
                 .trim()
         );
         return { lrc: '', txt: plainText };
