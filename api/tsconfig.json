@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // ВЫВОДИМ В СОВРЕМЕННОМ ФОРМАТЕ, СОВМЕСТИМОМ С "type": "module"
+    "module": "ESNext", 
+    "target": "ES2022",
+    "moduleResolution": "node",
+    "strict": false, 
+    // esModuleInterop не так важен при сборке в ESNext
+    "esModuleInterop": true, 
+    "noEmit": false
+  },
+  "include": ["./**/*.ts"]
+}
