@@ -63,9 +63,15 @@ function convertTtml(ttml: string): { lrc: string; txt: string } {
     return { lrc: '', txt: plainText };
   }
 
-  // For LRC, join multiline text with spaces as the standard is one line per timestamp.
+  // Convert to LRC, applying the special logic for instrumental/end tags
   const lrcLines = lines.map(line => {
-    const lrcText = line.text.replace(/\n/g, ' ');
+    let lrcText = line.text.replace(/\n/g, ' '); // LRC standard is one line per timestamp
+    const upperText = lrcText.trim().toUpperCase();
+
+    if (upperText === '#INSTRUMENTAL' || upperText === 'END') {
+        lrcText = '';
+    }
+    
     return `${formatTtmlTimeToLrc(line.time)}${lrcText}`;
   });
 
