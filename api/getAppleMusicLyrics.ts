@@ -1,10 +1,6 @@
 import { get } from '@vercel/edge-config';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const config = {
-  runtime: 'edge',
-};
-
 const appleMusicUrlRegex = /music\.apple\.com\/([a-z]{2})\/album\/[^/]+\/(\d+)/;
 
 export default async function handler(req: NextRequest) {
@@ -14,7 +10,7 @@ export default async function handler(req: NextRequest) {
 
   const { url } = await req.json();
   if (!url || typeof url !== 'string') {
-    return NextResponse.json({ error: '"url" является обязательным полем.' }, { status: 400 });
+    return NextResponse.json({ error: '\"url\" является обязательным полем.' }, { status: 400 });
   }
 
   const match = url.match(appleMusicUrlRegex);
