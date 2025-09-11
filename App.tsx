@@ -129,20 +129,53 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   };
   
   const handleNoAudio = () => { setAudioUrl(null); setAudioFileName(null); setAudioDuration(0); setNoAudioMode(true); setActiveTab(Tab.Text); setShowDraftNotice(false); };
-  const handleReset = () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute('src'); audioRef.current.load(); } if (audioUrl) { URL.revokeObjectURL(audioUrl); } setAudioUrl(null); setAudioFileName(null); setLines([]); setAudioDuration(0); setActiveTab(Tab.Audio); setIsFormattingHelperOpen(false); setShowDraftNotice(false); setNoAudioMode(false); localStorage.removeItem(DRAFT_KEY); setActiveIndex(0); };
+  const handleReset = () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute('src'); audioRef.current.load(); } if (audioUrl) { URL.revokeObjectURL(audioUrl); } setAudioUrl(null); setAudioFileName(null); setLines([]); setAudioDuration(0); setActiveTab(Tab.Audio); setIsFormattingHelperOpen(false); setShowDraftNotice(false); setNoAudioMode(false); setActiveIndex(0); };
   const handleConfirmReset = () => { handleReset(); setIsResetModalOpen(false); };
   
   const handleTextChange = (newText: string) => {
     const newTextLines = newText.split('\n');
+
+    const oldLinesMap = new Map<string, SyncedLine[]>();
+    for (const line of lines) {
+        const trimmedText = line.text.trim();
+        if (trimmedText !== '') {
+            if (!oldLinesMap.has(trimmedText)) {
+                oldLinesMap.set(trimmedText, []);
+            }
+            oldLinesMap.get(trimmedText)!.push(line);
+        }
+    }
+
     const newSyncedLines: SyncedLine[] = newTextLines.map((text, index) => {
-      const oldLine = lines[index];
-      return {
-        id: oldLine ? oldLine.id : `${Date.now()}-${index}`,
-        text: text,
-        begin: oldLine ? oldLine.begin : null,
-        end: oldLine ? oldLine.end : null,
-      };
+        const trimmedText = text.trim();
+
+        if (trimmedText === '') {
+            return {
+                id: `${Date.now()}-${index}`,
+                text: '',
+                begin: null,
+                end: null,
+            };
+        }
+
+        const potentialMatches = oldLinesMap.get(trimmedText);
+
+        if (potentialMatches && potentialMatches.length > 0) {
+            const matchedLine = potentialMatches.shift()!;
+            return {
+                ...matchedLine,
+                text: text, 
+            };
+        }
+
+        return {
+            id: `${Date.now()}-${index}`,
+            text: text,
+            begin: null,
+            end: null,
+        };
     });
+
     setLines(newSyncedLines);
   };
 
