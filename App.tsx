@@ -38,7 +38,8 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   const [draftAudioName, setDraftAudioName] = useState('');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [noAudioMode, setNoAudioMode] = useState(false);
-  
+  const [activeIndex, setActiveIndex] = useState(0);
+
   const audioRef = useRef<HTMLAudioElement>(null);
   const textEditorRef = useRef<{ scrollToLine: (index: number) => void }>(null);
   const hasLoadedDraft = useRef(false);
@@ -46,6 +47,15 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   useEffect(() => {
     setUserProfile(initialProfile);
   }, [initialProfile]);
+
+  useEffect(() => {
+    // When lines change, if activeIndex is out of bounds, reset it.
+    if (activeIndex >= lines.length && lines.length > 0) {
+      setActiveIndex(lines.length - 1);
+    } else if (lines.length === 0) {
+      setActiveIndex(0);
+    }
+  }, [lines, activeIndex]);
 
   useEffect(() => {
     if (hasLoadedDraft.current) return;
@@ -119,11 +129,25 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   };
   
   const handleNoAudio = () => { setAudioUrl(null); setAudioFileName(null); setAudioDuration(0); setNoAudioMode(true); setActiveTab(Tab.Text); setShowDraftNotice(false); };
-  const handleReset = () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute('src'); audioRef.current.load(); } if (audioUrl) { URL.revokeObjectURL(audioUrl); } setAudioUrl(null); setAudioFileName(null); setLines([]); setAudioDuration(0); setActiveTab(Tab.Audio); setIsFormattingHelperOpen(false); setShowDraftNotice(false); setNoAudioMode(false); localStorage.removeItem(DRAFT_KEY); };
+  const handleReset = () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute('src'); audioRef.current.load(); } if (audioUrl) { URL.revokeObjectURL(audioUrl); } setAudioUrl(null); setAudioFileName(null); setLines([]); setAudioDuration(0); setActiveTab(Tab.Audio); setIsFormattingHelperOpen(false); setShowDraftNotice(false); setNoAudioMode(false); localStorage.removeItem(DRAFT_KEY); setActiveIndex(0); };
   const handleConfirmReset = () => { handleReset(); setIsResetModalOpen(false); };
-  const handleTextChange = (newText: string) => { const newLines = newText.split('\n').map((text, i) => ({ id: `${Date.now()}-${i}`, text, begin: null, end: null })); setLines(newLines); };
+  
+  const handleTextChange = (newText: string) => {
+    const newTextLines = newText.split('\n');
+    const newSyncedLines: SyncedLine[] = newTextLines.map((text, index) => {
+      const oldLine = lines[index];
+      return {
+        id: oldLine ? oldLine.id : `${Date.now()}-${index}`,
+        text: text,
+        begin: oldLine ? oldLine.begin : null,
+        end: oldLine ? oldLine.end : null,
+      };
+    });
+    setLines(newSyncedLines);
+  };
+
   const handleLinesUpload = (newLines: SyncedLine[]) => { setLines(newLines); setActiveTab(Tab.Sync); };
-  const handleGoToIssue = (lineIndex: number) => { setScrollToLineIndex(lineIndex); if (activeTab === Tab.Text && textEditorRef.current) { textEditorRef.current.scrollToLine(lineIndex); } setTimeout(() => setScrollToLineIndex(null), 50); };
+  const handleGoToIssue = (lineIndex: number) => { setActiveIndex(lineIndex); setScrollToLineIndex(lineIndex); if (activeTab === Tab.Text && textEditorRef.current) { textEditorRef.current.scrollToLine(lineIndex); } setTimeout(() => setScrollToLineIndex(null), 50); };
   const handleFixIssue = (lineId: string, issueType: IssueType) => setLines(applyFix(lines, lineId, issueType));
   const handleFixAll = (issueType: IssueType) => setLines(applyFixAll(lines, issueType));
   const handleProfileClick = () => setActiveTab(Tab.Profile);
@@ -132,7 +156,7 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
     switch (activeTab) {
       case Tab.Audio: return <AudioUpload onAudioUpload={handleAudioUpload} audioFileName={audioFileName} onNoAudio={handleNoAudio} />;
       case Tab.Text: return <TextEditor ref={textEditorRef} text={textForEditor} onTextChange={handleTextChange} onLinesUpload={handleLinesUpload} onToggleHelper={() => setIsFormattingHelperOpen(!isFormattingHelperOpen)} />;
-      case Tab.Sync: return <Synchronizer lines={lines} setLines={setLines} audioRef={audioRef} onToggleHelper={() => setIsFormattingHelperOpen(!isFormattingHelperOpen)} scrollToLineIndex={scrollToLineIndex} />;
+      case Tab.Sync: return <Synchronizer lines={lines} setLines={setLines} audioRef={audioRef} onToggleHelper={() => setIsFormattingHelperOpen(!isFormattingHelperOpen)} scrollToLineIndex={scrollToLineIndex} activeIndex={activeIndex} setActiveIndex={setActiveIndex} />;
       case Tab.Result: return <ResultView lines={lines} audioDuration={audioDuration} audioFileName={audioFileName} noAudioMode={noAudioMode} />;
       case Tab.Player: return <PlayerView lines={lines} audioRef={audioRef} />;
       case Tab.Admin: return <AdminView />;

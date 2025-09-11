@@ -11,6 +11,8 @@ interface SynchronizerProps {
   audioRef: React.RefObject<HTMLAudioElement>;
   onToggleHelper: () => void;
   scrollToLineIndex: number | null;
+  activeIndex: number;
+  setActiveIndex: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const formatTime = (seconds: number | null) => {
@@ -27,8 +29,7 @@ const formatTime = (seconds: number | null) => {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`;
 };
 
-const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, onToggleHelper, scrollToLineIndex }) => {
-  const [activeIndex, setActiveIndex] = useState<number>(0);
+const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, onToggleHelper, scrollToLineIndex, activeIndex, setActiveIndex }) => {
   const activeLineRef = useRef<HTMLDivElement>(null);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
@@ -401,7 +402,7 @@ const Synchronizer: React.FC<SynchronizerProps> = ({ lines, setLines, audioRef, 
         </div>
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-800/90 backdrop-blur-sm border-t border-slate-700 flex justify-center items-center">
-        <button onClick={handleSyncAction} disabled={lines[activeIndex]?.text.trim() === ''}
+        <button onClick={handleSyncAction} disabled={!lines[activeIndex] || lines[activeIndex].text.trim() === ''}
           className={`flex items-center justify-center gap-3 w-48 h-14 rounded-xl text-lg font-semibold shadow-lg transform transition-all hover:scale-105 focus:outline-none focus:ring-4 ${
             syncMode === 'begin' ? 'bg-slate-200 text-slate-900 focus:ring-slate-400' : 'bg-sky-500 text-white focus:ring-sky-300'
           } disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed disabled:transform-none`}>
