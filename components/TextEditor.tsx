@@ -114,7 +114,8 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
             ref={textareaRef}
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
-            placeholder="Вставьте ваш текст здесь.\nКаждая новая строка будет отдельным субтитром."
+            placeholder="Вставьте ваш текст здесь.
+Каждая новая строка будет отдельным субтитром."
             className="h-full w-full p-5 bg-black/20 border border-white/10 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] resize-none custom-scrollbar text-base"
           />
         </div>

@@ -33,13 +33,11 @@ export const formatLRCTime = (seconds: number): string => {
 
 // XML-экранирование для TTML
 export const escapeXml = (unsafe: string): string => {
-    return unsafe.replace(/[<>&"']/g, (c) => {
+    return unsafe.replace(/[<>&]/g, (c) => {
         switch (c) {
             case '<': return '&lt;';
             case '>': return '&gt;';
             case '&': return '&amp;';
-            case '"': return '&quot;'; // Обработка кавычек
-            case "'": return '&apos;'; // Обработка апострофов
             default: return c;
         }
     });
