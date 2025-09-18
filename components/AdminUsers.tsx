@@ -71,8 +71,7 @@ const AdminUsers: React.FC = () => {
   return (
     <>
       <div className="p-4 sm:p-6 lg:p-8 bg-black/20 rounded-lg shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold text-white">Управление пользователями</h3>
+        <div className="flex justify-end items-center mb-6">
           <button
             onClick={handleOpenModal}
             className="bg-[#FF553E] hover:bg-[#ff7b6b] text-white font-bold py-2 px-4 rounded-md transition-colors shadow-md"
