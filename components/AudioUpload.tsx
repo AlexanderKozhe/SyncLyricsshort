@@ -1,6 +1,5 @@
 
 import React, { useCallback, useRef } from 'react';
-import MusicNoteIcon from './icons/MusicNoteIcon';
 
 interface AudioUploadProps {
   onAudioUpload: (file: File) => void;
@@ -37,11 +36,9 @@ const AudioUpload: React.FC<AudioUploadProps> = ({ onAudioUpload, audioFileName,
     <div className="h-full flex flex-col items-center justify-center text-center bg-black/20 rounded-lg p-8">
       {audioFileName ? (
         <>
-          <h2 className="text-xl font-semibold mb-4 text-white">Аудиофайл загружен</h2>
-          <div className="flex items-center text-left gap-4 bg-black/20 border border-white/10 rounded-lg px-6 py-4 mb-8 w-full max-w-lg">
-            <MusicNoteIcon />
-            <p className="text-lg text-[#FF553E] font-medium break-all" aria-label="Имя файла">{audioFileName}</p>
-          </div>
+          <h2 className="text-xl font-semibold mb-4 text-white">
+            Загружен файл: <span className="text-[#FF553E] font-medium break-all">{audioFileName}</span>
+          </h2>
           <button
             onClick={() => fileInputRef.current?.click()}
             className="px-6 py-3 bg-[#FF553E] text-white font-semibold rounded-lg hover:bg-[#ff7b6b] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#5B86E5]"
