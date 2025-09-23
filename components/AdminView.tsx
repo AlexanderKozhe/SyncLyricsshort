@@ -8,11 +8,10 @@ import TextFromAMConverter from './admin/TextFromAMConverter';
 import MusixmatchConverter from './admin/MusixmatchConverter';
 import LrcToTtmlConverter from './admin/LrcToTtmlConverter';
 import DraftToLrcConverter from './admin/DraftToLrcConverter';
-import WordSync from './admin/WordSync';
 
 // --- Main Admin View Component ---
 
-type Tool = 'musixmatch' | 'lrc2ttml' | 'draft2lrc' | 'textfromam' | 'wordsync';
+type Tool = 'musixmatch' | 'lrc2ttml' | 'draft2lrc' | 'textfromam';
 
 const AdminView: React.FC = () => {
     const [activeTool, setActiveTool] = useState<Tool | null>(null);
@@ -39,11 +38,6 @@ const AdminView: React.FC = () => {
           title: 'LRC → TTML Конвертер',
           description: 'Конвертирует стандартный LRC-файл в формат TTML.',
         },
-        {
-          id: 'wordsync' as Tool,
-          title: 'Синхронизация пословно',
-          description: 'Загрузка TTML для последующей пословной синхронизации.',
-        },
     ];
 
     const renderContent = () => {
@@ -57,8 +51,6 @@ const AdminView: React.FC = () => {
                 return <LrcToTtmlConverter onBack={() => setActiveTool(null)} />;
             case 'draft2lrc':
                 return <DraftToLrcConverter onBack={() => setActiveTool(null)} />;
-            case 'wordsync':
-                return <WordSync onBack={() => setActiveTool(null)} />;
             default:
                 return (
                     // Главное меню и список пользователей
