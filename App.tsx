@@ -17,8 +17,15 @@ import AdminView from './components/AdminView';
 import ProfilePage from './components/ProfilePage';
 import ProfileDropdown from './components/ProfileDropdown';
 import ZionLogo from './components/icons/ZionLogo';
+import DraftModal from './components/DraftModal';
 
 const DRAFT_KEY = 'zion_sync_draft';
+
+interface DraftData {
+  lines: SyncedLine[];
+  audioFileName: string | null;
+  timestamp: number;
+}
 
 interface AppProps {
   userProfile: User;
@@ -29,27 +36,26 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   const [userProfile, setUserProfile] = useState(initialProfile);
   const [activeTab, setActiveTab] = useState<Tab>(Tab.Audio);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isFileUploaded, setIsFileUploaded] = useState(false);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [lines, setLines] = useState<SyncedLine[]>([]);
   const [isFormattingHelperOpen, setIsFormattingHelperOpen] = useState(false);
   const [scrollToLineIndex, setScrollToLineIndex] = useState<number | null>(null);
-  const [showDraftNotice, setShowDraftNotice] = useState(false);
-  const [draftAudioName, setDraftAudioName] = useState('');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [noAudioMode, setNoAudioMode] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
+  const [draftData, setDraftData] = useState<DraftData | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const textEditorRef = useRef<{ scrollToLine: (index: number) => void }>(null);
-  const hasLoadedDraft = useRef(false);
 
   useEffect(() => {
     setUserProfile(initialProfile);
   }, [initialProfile]);
 
   useEffect(() => {
-    // When lines change, if activeIndex is out of bounds, reset it.
     if (activeIndex >= lines.length && lines.length > 0) {
       setActiveIndex(lines.length - 1);
     } else if (lines.length === 0) {
@@ -58,17 +64,13 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   }, [lines, activeIndex]);
 
   useEffect(() => {
-    if (hasLoadedDraft.current) return;
-    hasLoadedDraft.current = true;
     try {
       const savedDraft = localStorage.getItem(DRAFT_KEY);
       if (savedDraft) {
-        const { lines: savedLines, audioFileName: savedAudioFileName } = JSON.parse(savedDraft);
-        if (Array.isArray(savedLines) && savedLines.length > 0) {
-          setLines(savedLines);
-          setAudioFileName(savedAudioFileName);
-          setDraftAudioName(savedAudioFileName);
-          setShowDraftNotice(true);
+        const parsedDraft: DraftData = JSON.parse(savedDraft);
+        if (Array.isArray(parsedDraft.lines) && parsedDraft.lines.length > 0 && parsedDraft.timestamp) {
+          setDraftData(parsedDraft);
+          setIsDraftModalOpen(true);
         }
       }
     } catch (error) {
@@ -79,8 +81,8 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   useEffect(() => {
     try {
       if (lines.length > 0 || audioFileName) {
-        const draft = JSON.stringify({ lines, audioFileName });
-        localStorage.setItem(DRAFT_KEY, draft);
+        const draft: DraftData = { lines, audioFileName, timestamp: Date.now() };
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
       } else {
         localStorage.removeItem(DRAFT_KEY);
       }
@@ -96,14 +98,14 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
     if (tab === Tab.Audio) return false;
     if (tab === Tab.Admin) return userProfile?.role !== Role.Admin;
     if (tab === Tab.Profile) return !userProfile;
-    const hasSource = !!audioUrl || showDraftNotice || noAudioMode;
+    const hasSource = !!audioUrl || (draftData !== null) || noAudioMode;
     if (!hasSource) return true;
     const hasText = lines.length > 0;
     if (!hasText && (tab === Tab.Sync || tab === Tab.Result || tab === Tab.Player)) return true;
     if ((tab === Tab.Sync || tab === Tab.Player) && (noAudioMode || !audioUrl)) return true;
     if (tab === Tab.Player && !allLinesSynced) return true;
     return false;
-  }, [audioUrl, lines, showDraftNotice, allLinesSynced, noAudioMode, userProfile]);
+  }, [audioUrl, lines, draftData, allLinesSynced, noAudioMode, userProfile]);
 
   const handleProfileUpdate = async (updatedProfileData: Partial<Omit<User, 'uid' | 'email' | 'role'>>) => {
     const newProfile = { ...userProfile, ...updatedProfileData };
@@ -123,18 +125,17 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
     const url = URL.createObjectURL(file);
     setAudioUrl(url);
     setAudioFileName(file.name);
+    setIsFileUploaded(true);
     setNoAudioMode(false);
     setActiveTab(Tab.Text);
-    setShowDraftNotice(false);
   };
   
-  const handleNoAudio = () => { setAudioUrl(null); setAudioFileName(null); setAudioDuration(0); setNoAudioMode(true); setActiveTab(Tab.Text); setShowDraftNotice(false); };
-  const handleReset = () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute('src'); audioRef.current.load(); } if (audioUrl) { URL.revokeObjectURL(audioUrl); } setAudioUrl(null); setAudioFileName(null); setLines([]); setAudioDuration(0); setActiveTab(Tab.Audio); setIsFormattingHelperOpen(false); setShowDraftNotice(false); setNoAudioMode(false); setActiveIndex(0); };
+  const handleNoAudio = () => { setAudioUrl(null); setAudioFileName(null); setAudioDuration(0); setNoAudioMode(true); setActiveTab(Tab.Text); setIsFileUploaded(false); };
+  const handleReset = () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute('src'); audioRef.current.load(); } if (audioUrl) { URL.revokeObjectURL(audioUrl); } setAudioUrl(null); setAudioFileName(null); setLines([]); setAudioDuration(0); setActiveTab(Tab.Audio); setIsFormattingHelperOpen(false); setNoAudioMode(false); setActiveIndex(0); setIsFileUploaded(false); setDraftData(null); localStorage.removeItem(DRAFT_KEY); };
   const handleConfirmReset = () => { handleReset(); setIsResetModalOpen(false); };
   
   const handleTextChange = (newText: string) => {
     const newTextLines = newText.split('\n');
-
     const oldLinesMap = new Map<string, SyncedLine[]>();
     for (const line of lines) {
         const trimmedText = line.text.trim();
@@ -145,38 +146,36 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
             oldLinesMap.get(trimmedText)!.push(line);
         }
     }
-
     const newSyncedLines: SyncedLine[] = newTextLines.map((text, index) => {
         const trimmedText = text.trim();
-
         if (trimmedText === '') {
-            return {
-                id: `${Date.now()}-${index}`,
-                text: '',
-                begin: null,
-                end: null,
-            };
+            return { id: `${Date.now()}-${index}`, text: '', begin: null, end: null };
         }
-
         const potentialMatches = oldLinesMap.get(trimmedText);
-
         if (potentialMatches && potentialMatches.length > 0) {
             const matchedLine = potentialMatches.shift()!;
-            return {
-                ...matchedLine,
-                text: text, 
-            };
+            return { ...matchedLine, text: text };
         }
-
-        return {
-            id: `${Date.now()}-${index}`,
-            text: text,
-            begin: null,
-            end: null,
-        };
+        return { id: `${Date.now()}-${index}`, text: text, begin: null, end: null };
     });
-
     setLines(newSyncedLines);
+  };
+
+  const handleRestoreDraft = () => {
+    if (draftData) {
+      setLines(draftData.lines);
+      setAudioFileName(draftData.audioFileName);
+      if (!draftData.audioFileName) {
+        setActiveTab(Tab.Text);
+        setNoAudioMode(true);
+      }
+    }
+    setIsDraftModalOpen(false);
+  };
+
+  const handleResetDraft = () => {
+    handleReset();
+    setIsDraftModalOpen(false);
   };
 
   const handleLinesUpload = (newLines: SyncedLine[]) => { setLines(newLines); setActiveTab(Tab.Sync); };
@@ -187,7 +186,7 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case Tab.Audio: return <AudioUpload onAudioUpload={handleAudioUpload} audioFileName={audioFileName} onNoAudio={handleNoAudio} />;
+      case Tab.Audio: return <AudioUpload onAudioUpload={handleAudioUpload} audioFileName={audioFileName} onNoAudio={handleNoAudio} isFileUploaded={isFileUploaded} />;
       case Tab.Text: return <TextEditor ref={textEditorRef} text={textForEditor} onTextChange={handleTextChange} onLinesUpload={handleLinesUpload} onToggleHelper={() => setIsFormattingHelperOpen(!isFormattingHelperOpen)} />;
       case Tab.Sync: return <Synchronizer lines={lines} setLines={setLines} audioRef={audioRef} onToggleHelper={() => setIsFormattingHelperOpen(!isFormattingHelperOpen)} scrollToLineIndex={scrollToLineIndex} activeIndex={activeIndex} setActiveIndex={setActiveIndex} />;
       case Tab.Result: return <ResultView lines={lines} audioDuration={audioDuration} audioFileName={audioFileName} noAudioMode={noAudioMode} />;
@@ -197,6 +196,20 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
       default: return null;
     }
   };
+
+  const draftNoticeMessage = useMemo(() => {
+    if (!draftData) return null;
+    if (draftData.audioFileName) {
+      return <>Загружен черновик с аудиофайлом: <strong className="font-mono">{draftData.audioFileName}</strong></>;
+    }
+    if (draftData.lines.length > 0) {
+        const firstLine = draftData.lines.find(l => l.text.trim())?.text.trim();
+        if (firstLine) {
+            return <>Загружен черновик с текстом: <strong className="font-mono">{firstLine.substring(0, 50)}...</strong></>;
+        }
+    }
+    return 'Загружен пустой черновик.';
+  }, [draftData]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#5B86E5] text-white font-sans overflow-hidden">
@@ -218,13 +231,6 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
           </div>
         </div>
         
-        {showDraftNotice && (
-          <div className="mx-6 md:mx-8 mt-4 p-3 bg-yellow-900/50 border border-yellow-700 text-yellow-300 rounded-lg flex justify-between items-center">
-            <p className="text-sm">Загружен черновик. Вам потребуется заново выбрать аудиофайл: <strong className="font-mono">{draftAudioName}</strong></p>
-            <button onClick={() => { setShowDraftNotice(false); handleReset(); }} className="bg-yellow-700 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-md text-xs">Начать заново</button>
-          </div>
-        )}
-
         <div className="flex-grow p-6 md:p-8 overflow-y-auto custom-scrollbar">
           <div className="h-full flex gap-6">
             <div className="flex-grow h-full min-w-0">
@@ -239,6 +245,14 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
 
       {audioUrl && <AudioPlayer src={audioUrl} audioRef={audioRef} onLoadedMetadata={(e) => setAudioDuration(e.currentTarget.duration)} />}
       
+      <DraftModal 
+        isOpen={isDraftModalOpen} 
+        onRestore={handleRestoreDraft} 
+        onReset={handleResetDraft} 
+        message={draftNoticeMessage}
+        timestamp={draftData?.timestamp ?? null}
+      />
+
       {isResetModalOpen && (
         <Modal isOpen={isResetModalOpen} onClose={() => setIsResetModalOpen(false)} onConfirm={handleConfirmReset} title="Подтверждение сброса" confirmText="Да, сбросить" cancelText="Отмена">
           <p className="text-base leading-relaxed">
