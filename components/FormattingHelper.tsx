@@ -4,7 +4,7 @@ import { SyncedLine, AnalysisIssue, IssueType } from '../types';
 import { analyzeText } from '../services/analysis';
 import CloseIcon from './icons/CloseIcon';
 import WandIcon from './icons/WandIcon';
-import Modal from './Modal'; // Import Modal component
+import Modal from './Modal';
 
 interface FormattingHelperProps {
   lines: SyncedLine[];
@@ -12,7 +12,6 @@ interface FormattingHelperProps {
   onGoToIssue: (lineIndex: number) => void;
   onFixIssue: (lineId: string, issueType: IssueType) => void;
   onFixAll: (issueType: IssueType) => void;
-  onTextChange: (newText: string) => void;
 }
 
 const analysisSections: { key: IssueType, title: string, description: string }[] = [
@@ -91,57 +90,12 @@ const AnalysisSection: React.FC<{
     );
 };
 
-const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onGoToIssue, onFixIssue, onFixAll, onTextChange }) => {
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
+const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onGoToIssue, onFixIssue, onFixAll }) => {
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
 
   const analysisResults = useMemo(() => analyzeText(lines), [lines]);
   const totalIssues = useMemo(() => Object.values(analysisResults).reduce((acc, issues) => acc + issues.length, 0), [analysisResults]);
   const isTextEmpty = useMemo(() => lines.length === 0 || lines.every(line => line.text.trim() === ''), [lines]);
-
-  const handleAiFix = async () => {
-    setIsAiLoading(true);
-    setAiError(null);
-    try {
-        const fullText = lines.map(line => line.text).join('\n');
-
-        const response = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ prompt: fullText }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.details || errorData.error || `Request failed with status ${response.status}`);
-        }
-
-        const data = await response.json();
-        const newText = data.text;
-
-        if (!newText) {
-            throw new Error("AI did not return any text.");
-        }
-        
-        const originalLineCount = lines.length;
-        const newLineCount = newText.split('\n').length;
-
-        if (originalLineCount !== newLineCount) {
-             throw new Error(`AI вернул ${newLineCount} строк вместо ${originalLineCount}. Попробуйте снова.`);
-        }
-        
-        onTextChange(newText);
-
-    } catch (error) {
-        console.error("AI fix failed:", error);
-        setAiError(error instanceof Error ? error.message : "Произошла неизвестная ошибка.");
-    } finally {
-        setIsAiLoading(false);
-    }
-  };
 
   const renderBody = () => {
     if (isTextEmpty) {
@@ -184,19 +138,6 @@ const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onG
           </button>
         </header>
         <div className="flex-grow overflow-y-auto space-y-4 px-3 pb-3 custom-scrollbar">
-          <div className="bg-black/20 p-4 rounded-lg">
-              <h4 className="font-bold text-base text-[#FF553E] mb-2">AI Помощник</h4>
-              <p className="text-xs text-gray-300 mb-3">Автоматическое исправление грамматики, пунктуации и заглавных букв во всём тексте.</p>
-               <button
-                  onClick={handleAiFix}
-                  disabled={isAiLoading || isTextEmpty}
-                  className="w-full flex items-center justify-center gap-2 bg-[#FF553E] hover:bg-[#ff7b6b] disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-              >
-                  <WandIcon />
-                  <span>{isAiLoading ? 'Обработка...' : 'Улучшить весь текст'}</span>
-              </button>
-              {aiError && <p className="text-xs text-red-400 mt-2 text-center">{aiError}</p>}
-          </div>
           {renderBody()}
         </div>
       </aside>

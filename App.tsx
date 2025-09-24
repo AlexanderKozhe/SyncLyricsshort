@@ -1,8 +1,6 @@
 
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
-import { Tab, SyncedLine, IssueType, User, Role } from './types';
+import { Tab, SyncedLine, IssueType } from './types';
 import Tabs from './components/Tabs';
 import AudioUpload from './components/AudioUpload';
 import TextEditor from './components/TextEditor';
@@ -13,9 +11,6 @@ import FormattingHelper from './components/FormattingHelper';
 import PlayerView from './components/PlayerView';
 import { applyFix, applyFixAll } from './services/analysis';
 import Modal from './components/Modal';
-import AdminView from './components/AdminView';
-import ProfilePage from './components/ProfilePage';
-import ProfileDropdown from './components/ProfileDropdown';
 import ZionLogo from './components/icons/ZionLogo';
 import DraftModal from './components/DraftModal';
 
@@ -27,13 +22,7 @@ interface DraftData {
   timestamp: number;
 }
 
-interface AppProps {
-  userProfile: User;
-  onLogout: () => void;
-}
-
-const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
-  const [userProfile, setUserProfile] = useState(initialProfile);
+const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.Audio);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isFileUploaded, setIsFileUploaded] = useState(false);
@@ -50,10 +39,6 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const textEditorRef = useRef<{ scrollToLine: (index: number) => void }>(null);
-
-  useEffect(() => {
-    setUserProfile(initialProfile);
-  }, [initialProfile]);
 
   useEffect(() => {
     if (activeIndex >= lines.length && lines.length > 0) {
@@ -97,8 +82,6 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
 
   const isTabDisabled = useCallback((tab: Tab) => {
     if (tab === Tab.Audio) return false;
-    if (tab === Tab.Admin) return userProfile?.role !== Role.Admin;
-    if (tab === Tab.Profile) return !userProfile;
     const hasSource = !!audioUrl || (draftData !== null) || noAudioMode;
     if (!hasSource) return true;
     const hasTextContent = lines.some(l => l.text.trim() !== '');
@@ -106,20 +89,7 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
     if ((tab === Tab.Sync || tab === Tab.Player) && (noAudioMode || !audioUrl)) return true;
     if (tab === Tab.Player && !allLinesSynced) return true;
     return false;
-  }, [audioUrl, lines, draftData, allLinesSynced, noAudioMode, userProfile]);
-
-  const handleProfileUpdate = async (updatedProfileData: Partial<Omit<User, 'uid' | 'email' | 'role'>>) => {
-    const newProfile = { ...userProfile, ...updatedProfileData };
-    setUserProfile(newProfile);
-    try {
-      const userDocRef = doc(db, 'users', userProfile.uid);
-      await setDoc(userDocRef, updatedProfileData, { merge: true });
-    } catch (error) {
-      console.error("Ошибка при обновлении профиля:", error);
-      setUserProfile(initialProfile); 
-      alert('Не удалось сохранить изменения. Попробуйте перезагрузить страницу.');
-    }
-  };
+  }, [audioUrl, lines, draftData, allLinesSynced, noAudioMode]);
 
   const handleAudioUpload = (file: File) => {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
@@ -183,17 +153,14 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
   const handleGoToIssue = (lineIndex: number) => { setActiveIndex(lineIndex); setScrollToLineIndex(lineIndex); if (activeTab === Tab.Text && textEditorRef.current) { textEditorRef.current.scrollToLine(lineIndex); } setTimeout(() => setScrollToLineIndex(null), 50); };
   const handleFixIssue = (lineId: string, issueType: IssueType) => setLines(applyFix(lines, lineId, issueType));
   const handleFixAll = (issueType: IssueType) => setLines(applyFixAll(lines, issueType));
-  const handleProfileClick = () => setActiveTab(Tab.Profile);
 
   const renderContent = () => {
     switch (activeTab) {
       case Tab.Audio: return <AudioUpload onAudioUpload={handleAudioUpload} audioFileName={audioFileName} onNoAudio={handleNoAudio} isFileUploaded={isFileUploaded} />;
       case Tab.Text: return <TextEditor ref={textEditorRef} text={textForEditor} onTextChange={handleTextChange} onLinesUpload={handleLinesUpload} onToggleHelper={() => setIsFormattingHelperOpen(!isFormattingHelperOpen)} />;
       case Tab.Sync: return <Synchronizer lines={lines} setLines={setLines} audioRef={audioRef} onToggleHelper={() => setIsFormattingHelperOpen(!isFormattingHelperOpen)} scrollToLineIndex={scrollToLineIndex} activeIndex={activeIndex} setActiveIndex={setActiveIndex} />;
-      case Tab.Result: return <ResultView lines={lines} audioDuration={audioDuration} audioFileName={audioFileName} noAudioMode={noAudioMode} />;
+      case Tab.Result: return <ResultVew lines={lines} audioDuration={audioDuration} audioFileName={audioFileName} noAudioMode={noAudioMode} />;
       case Tab.Player: return <PlayerView lines={lines} audioRef={audioRef} />;
-      case Tab.Admin: return <AdminView />;
-      case Tab.Profile: return <ProfilePage user={userProfile} onUpdate={handleProfileUpdate} />;
       default: return null;
     }
   };
@@ -219,12 +186,11 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
           <ZionLogo />
           <p className="text-gray-300 text-sm mt-1">Построчный редактор и синхронизатор субтитров</p>
         </div>
-        <ProfileDropdown user={userProfile} onLogout={onLogout} onProfileClick={handleProfileClick} />
       </header>
 
       <main className="flex-grow flex flex-col overflow-hidden">
         <div className="flex justify-between items-center">
-          <Tabs activeTab={activeTab} setActiveTab={setActiveTab} isTabDisabled={isTabDisabled} isAdmin={userProfile?.role === Role.Admin} />
+          <Tabs activeTab={activeTab} setActiveTab={setActiveTab} isTabDisabled={isTabDisabled} isAdmin={false} />
           <div className="px-6">
             <button onClick={() => setIsResetModalOpen(true)} className="px-4 py-2 bg-[#FF553E] text-white text-sm font-semibold rounded-lg hover:bg-[#ff7b6b] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#5B86E5]">
               Сброс
@@ -238,7 +204,7 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
               {renderContent()}
             </div>
             {isFormattingHelperOpen && (activeTab === Tab.Text || activeTab === Tab.Sync) && (
-              <FormattingHelper lines={lines} onClose={() => setIsFormattingHelperOpen(false)} onGoToIssue={handleGoToIssue} onFixIssue={handleFixIssue} onFixAll={handleFixAll} onTextChange={handleTextChange} />
+              <FormattingHelper lines={lines} onClose={() => setIsFormattingHelperOpen(false)} onGoToIssue={handleGoToIssue} onFixIssue={handleFixIssue} onFixAll={handleFixAll} />
             )}
           </div>
         </div>
