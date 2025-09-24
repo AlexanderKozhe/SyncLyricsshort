@@ -37,13 +37,13 @@ const AudioUpload: React.FC<AudioUploadProps> = ({ onAudioUpload, audioFileName,
       {audioFileName ? (
         <>
           <h2 className="text-xl font-semibold mb-4 text-white">
-            Загружен файл: <span className="text-[#FF553E] font-medium break-all">{audioFileName}</span>
+            Загрузите файл: <span className="text-[#FF553E] font-medium break-all">{audioFileName}</span>
           </h2>
           <button
             onClick={() => fileInputRef.current?.click()}
             className="px-6 py-3 bg-[#FF553E] text-white font-semibold rounded-lg hover:bg-[#ff7b6b] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#5B86E5]"
           >
-            Изменить аудиофайл
+            Загрузить
           </button>
         </>
       ) : (
