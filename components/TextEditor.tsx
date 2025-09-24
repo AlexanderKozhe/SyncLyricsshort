@@ -1,10 +1,11 @@
 
-import React, { useRef, useImperativeHandle, forwardRef, useState, useCallback } from 'react';
+import React, { useRef, useImperativeHandle, forwardRef, useState, useCallback, useEffect } from 'react';
 import SparklesIcon from './icons/SparklesIcon';
 import UploadIcon from './icons/UploadIcon';
-import PasteIcon from './icons/PasteIcon';
+import PencilIcon from './icons/PencilIcon';
 import { SyncedLine } from '../types';
 import { parseTTML } from '../services/parser';
+import Modal from './Modal';
 
 interface TextEditorProps {
   text: string;
@@ -16,9 +17,16 @@ interface TextEditorProps {
 const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEditorProps>(({ text, onTextChange, onLinesUpload, onToggleHelper }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showPasteArea, setShowPasteArea] = useState(false);
+  const [showPasteArea, setShowPasteArea] = useState(() => text.length > 0);
+  const [isResetSourceModalOpen, setIsResetSourceModalOpen] = useState(false);
 
   const hasText = text.length > 0;
+
+  useEffect(() => {
+    if (hasText) {
+      setShowPasteArea(true);
+    }
+  }, [hasText]);
 
   useImperativeHandle(ref, () => ({
     scrollToLine: (lineIndex: number) => {
@@ -48,7 +56,7 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
                 alert(error instanceof Error ? error.message : 'Произошла ошибка при разборе файла.');
             }
         } else { 
-            onTextChange(fileContent);
+            alert('Пожалуйста, загрузите файл в формате .ttml');
         }
     };
     reader.readAsText(file);
@@ -72,61 +80,81 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
     event.preventDefault();
     const file = event.dataTransfer.files?.[0];
     if (file) {
-        if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt') || file.type === 'application/ttml+xml' || file.name.toLowerCase().endsWith('.ttml')) {
+        if (file.type === 'application/ttml+xml' || file.name.toLowerCase().endsWith('.ttml')) {
             handleFileUpload(file);
+        } else {
+            alert('Пожалуйста, перетащите файл в формате .ttml');
         }
     }
-  }, [onTextChange, onLinesUpload]);
+  }, [onLinesUpload]);
 
   const handleReset = () => {
     onTextChange('');
     setShowPasteArea(false);
   };
+  
+  const handleConfirmReset = () => {
+    handleReset();
+    setIsResetSourceModalOpen(false);
+  };
 
   if (hasText || showPasteArea) {
     return (
-      <div className="h-full flex flex-col bg-black/20 rounded-lg">
-        <div className="flex justify-between items-center p-6 border-b border-white/10">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Шаг 2: Вставьте и отредактируйте текст</h2>
-            <p className="text-gray-300 mt-1">Каждая строка будет отдельным элементом для синхронизации.</p>
+      <>
+        <div className="h-full flex flex-col bg-black/20 rounded-lg">
+          <div className="flex justify-between items-center p-6 border-b border-white/10">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Шаг 2: Напишите и отредактируйте текст</h2>
+              <p className="text-gray-300 mt-1">Каждая строка будет отдельным элементом для синхронизации.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                  onClick={() => setIsResetSourceModalOpen(true)}
+                  className="whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+                  title="Изменить источник текста"
+              >
+                  Изменить источник
+              </button>
+              <button
+                onClick={onToggleHelper}
+                className="flex items-center gap-2 whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium transition-all duration-300 ease-in-out bg-black/20 text-white hover:bg-black/30"
+                title="Помощник по форматированию"
+              >
+                <SparklesIcon />
+                <span>Помощник</span>
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-                onClick={handleReset}
-                className="whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
-                title="Изменить источник текста"
-            >
-                Изменить источник
-            </button>
-            <button
-              onClick={onToggleHelper}
-              className="flex items-center gap-2 whitespace-nowrap rounded-lg py-2 px-3 text-sm font-medium transition-all duration-300 ease-in-out bg-black/20 text-white hover:bg-black/30"
-              title="Помощник по форматированию"
-            >
-              <SparklesIcon />
-              <span>Помощник</span>
-            </button>
+          <div className="flex-grow p-6 pt-0">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(e) => onTextChange(e.target.value)}
+              placeholder={"Напишите ваш текст здесь.\nКаждая новая строка будет отдельным субтитром."}
+              className="h-full w-full p-5 bg-black/20 border border-white/10 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] resize-none custom-scrollbar text-base"
+            />
           </div>
         </div>
-        <div className="flex-grow p-6 pt-0">
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => onTextChange(e.target.value)}
-            placeholder="Вставьте ваш текст здесь.
-Каждая новая строка будет отдельным субтитром."
-            className="h-full w-full p-5 bg-black/20 border border-white/10 rounded-md focus:ring-2 focus:ring-[#FF553E] focus:border-[#FF553E] resize-none custom-scrollbar text-base"
-          />
-        </div>
-      </div>
+        <Modal 
+          isOpen={isResetSourceModalOpen} 
+          onClose={() => setIsResetSourceModalOpen(false)} 
+          onConfirm={handleConfirmReset} 
+          title="Изменить источник текста?" 
+          confirmText="Да, изменить"
+          cancelText="Отмена"
+        >
+          <p className="text-base leading-relaxed">
+            Изменение источника текста удалит вашу текущую работу. Вы точно хотите продолжить?
+          </p>
+        </Modal>
+      </>
     );
   }
 
   return (
     <div className="h-full flex flex-col items-center justify-center text-center bg-black/20 rounded-lg p-8">
       <h2 className="text-xl font-semibold mb-2 text-white">Шаг 2: Добавьте текст</h2>
-      <p className="text-gray-300 mb-8 max-w-md">Вы можете загрузить текстовый файл или вставить текст вручную.</p>
+      <p className="text-gray-300 mb-8 max-w-md">Вы можете загрузить TTML-файл или написать текст вручную.</p>
       
       <label
         htmlFor="text-file-input"
@@ -137,14 +165,14 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           <UploadIcon />
           <p className="mb-2 text-sm text-gray-300"><span className="font-semibold text-[#FF553E]">Нажмите для загрузки</span> или перетащите файл</p>
-          <p className="text-xs text-gray-400">.TXT или .TTML файл</p>
+          <p className="text-xs text-gray-400">.TTML файл</p>
         </div>
       </label>
       <input 
         id="text-file-input" 
         ref={fileInputRef}
         type="file" 
-        accept=".txt,text/plain,.ttml,application/ttml+xml" 
+        accept=".ttml,application/ttml+xml" 
         className="hidden" 
         onChange={handleFileChange} 
       />
@@ -159,8 +187,8 @@ const TextEditor = forwardRef<{ scrollToLine: (index: number) => void }, TextEdi
         onClick={() => setShowPasteArea(true)}
         className="flex items-center justify-center gap-3 px-6 py-3 bg-black/20 text-white font-semibold rounded-lg hover:bg-black/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF553E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#5B86E5]"
       >
-        <PasteIcon />
-        Вставить текст вручную
+        <PencilIcon />
+        Написать текст
       </button>
     </div>
   );

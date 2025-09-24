@@ -68,7 +68,8 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
       const savedDraft = localStorage.getItem(DRAFT_KEY);
       if (savedDraft) {
         const parsedDraft: DraftData = JSON.parse(savedDraft);
-        if (Array.isArray(parsedDraft.lines) && parsedDraft.lines.length > 0 && parsedDraft.timestamp) {
+        const hasTextContent = parsedDraft.lines.some(line => line.text.trim() !== '');
+        if (parsedDraft.timestamp && hasTextContent) {
           setDraftData(parsedDraft);
           setIsDraftModalOpen(true);
         }
@@ -100,8 +101,8 @@ const App: React.FC<AppProps> = ({ userProfile: initialProfile, onLogout }) => {
     if (tab === Tab.Profile) return !userProfile;
     const hasSource = !!audioUrl || (draftData !== null) || noAudioMode;
     if (!hasSource) return true;
-    const hasText = lines.length > 0;
-    if (!hasText && (tab === Tab.Sync || tab === Tab.Result || tab === Tab.Player)) return true;
+    const hasTextContent = lines.some(l => l.text.trim() !== '');
+    if (!hasTextContent && (tab === Tab.Sync || tab === Tab.Result || tab === Tab.Player)) return true;
     if ((tab === Tab.Sync || tab === Tab.Player) && (noAudioMode || !audioUrl)) return true;
     if (tab === Tab.Player && !allLinesSynced) return true;
     return false;

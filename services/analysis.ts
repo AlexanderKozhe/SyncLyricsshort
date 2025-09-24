@@ -3,7 +3,8 @@ import { SyncedLine, AnalysisResult, AnalysisIssue, IssueType } from "../types";
 const replacements: { [key: string]: string } = {
     '[‘’′]': "'",
     '[“”„«»″]': '"',
-    '…': '...'
+    '…': '...',
+    '–': '—'
 };
 
 const fixers: { [key in IssueType]: (text: string) => string } = {
@@ -26,7 +27,7 @@ const fixers: { [key in IssueType]: (text: string) => string } = {
         return text;
     },
     doubleSpaces: (text) => text.replace(/\s{2,}/g, ' '),
-    tags: (text) => text.replace(/[*+/%&№@–]/g, ''),
+    tags: (text) => text, // Disabled fixer
     emptyLines: (text) => text, // This is handled by removal, not transformation
     startEmpty: (text) => text, // Handled by removal
     endEmpty: (text) => text,   // Handled by removal
@@ -67,11 +68,11 @@ export const analyzeText = (lines: SyncedLine[]): AnalysisResult => {
         if (/[.,;:]$/.test(trimmedText) && !/['")!?]$/.test(trimmedText)) {
             results.punctuation.push({ type: 'punctuation', lineIndex: index, lineId: id, text, message: 'Лишняя пунктуация в конце строки' });
         }
-         if (/[*+/%&№@–]/g.test(text)) {
-            results.tags.push({ type: 'tags', lineIndex: index, lineId: id, text, message: 'Найдены спец. символы (*, +, /, –, и др.)' });
+         if (/[*+/%&№@#]/g.test(text)) {
+            results.tags.push({ type: 'tags', lineIndex: index, lineId: id, text, message: 'Найдены спец. символы (*, +, /, и др.)' });
         }
-        if (/[‘’′“”„«»…]/g.test(text)) {
-            results.symbols.push({ type: 'symbols', lineIndex: index, lineId: id, text, message: 'Нестандартные кавычки или символы' });
+        if (/[‘’′“”„«»…–]/g.test(text)) {
+            results.symbols.push({ type: 'symbols', lineIndex: index, lineId: id, text, message: 'Нестандартные кавычки, тире или символы' });
         }
         if (/\s{2,}/.test(text)) {
             results.doubleSpaces.push({ type: 'doubleSpaces', lineIndex: index, lineId: id, text, message: 'Найдены двойные пробелы' });

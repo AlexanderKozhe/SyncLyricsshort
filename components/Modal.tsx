@@ -5,11 +5,11 @@ import CloseIcon from './icons/CloseIcon';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm?: () => void;
   title: string;
   children: React.ReactNode;
   confirmText?: string | null;
-  cancelText?: string;
+  cancelText?: string | null;
   isConfirmDisabled?: boolean;
 }
 
@@ -80,14 +80,16 @@ const Modal: React.FC<ModalProps> = ({
           {children}
         </div>
         <div className="flex items-center justify-end p-6 space-x-2 border-t border-white/10 rounded-b">
-          <button
-            onClick={onClose}
-            type="button"
-            className="px-5 py-2.5 text-sm font-medium text-white bg-white/10 rounded-lg hover:bg-white/20 focus:ring-4 focus:outline-none focus:ring-white/10 transition-colors"
-          >
-            {cancelText}
-          </button>
-          {confirmText && (
+          {cancelText && (
+            <button
+              onClick={onClose}
+              type="button"
+              className="px-5 py-2.5 text-sm font-medium text-white bg-white/10 rounded-lg hover:bg-white/20 focus:ring-4 focus:outline-none focus:ring-white/10 transition-colors"
+            >
+              {cancelText}
+            </button>
+          )}
+          {confirmText && onConfirm && (
             <button
                 onClick={onConfirm}
                 type="button"

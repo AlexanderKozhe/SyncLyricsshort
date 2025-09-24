@@ -4,6 +4,7 @@ import { SyncedLine, AnalysisIssue, IssueType } from '../types';
 import { analyzeText } from '../services/analysis';
 import CloseIcon from './icons/CloseIcon';
 import WandIcon from './icons/WandIcon';
+import Modal from './Modal'; // Import Modal component
 
 interface FormattingHelperProps {
   lines: SyncedLine[];
@@ -22,7 +23,7 @@ const analysisSections: { key: IssueType, title: string, description: string }[]
     { key: 'doubleSpaces', title: 'Двойные пробелы', description: 'Несколько пробелов подряд внутри строки.' },
     { key: 'capitalization', title: 'Заглавные буквы', description: 'Строка должна начинаться с заглавной.' },
     { key: 'punctuation', title: 'Пунктуация в конце', description: 'Лишние точки, запятые и др.' },
-    { key: 'tags', title: 'Спец. символы', description: 'Найдены символы типа *, +, / и др.' },
+    { key: 'tags', title: 'Спец. символы', description: 'Найдены символы типа *, +, /, # и др.' },
     { key: 'symbols', title: 'Нестандартные символы', description: 'Неправильные кавычки, тире и т.д.' },
 ];
 
@@ -34,7 +35,8 @@ const AnalysisSection: React.FC<{
     onGoToIssue: (lineIndex: number) => void;
     onFixIssue: (lineId: string, issueType: IssueType) => void;
     onFixAll: (issueType: IssueType) => void;
-}> = ({ title, description, issues, issueType, onGoToIssue, onFixIssue, onFixAll }) => {
+    onShowTagsWarning: () => void;
+}> = ({ title, description, issues, issueType, onGoToIssue, onFixIssue, onFixAll, onShowTagsWarning }) => {
     if (issues.length === 0) {
         return null;
     }
@@ -48,12 +50,14 @@ const AnalysisSection: React.FC<{
                     <h4 className="font-bold text-base text-[#FF553E]">{title} <span className="text-sm text-gray-200">({issues.length})</span></h4>
                     <p className="text-xs text-gray-300">{description}</p>
                 </div>
-                <button
-                    onClick={() => onFixAll(issueType)}
-                    className="flex items-center gap-1.5 bg-black/30 hover:bg-black/40 text-gray-200 text-xs font-bold py-1 px-2 rounded-md"
-                >
-                    <WandIcon /> Все
-                </button>
+                {issueType !== 'tags' && (
+                    <button
+                        onClick={() => onFixAll(issueType)}
+                        className="flex items-center gap-1.5 bg-black/30 hover:bg-black/40 text-gray-200 text-xs font-bold py-1 px-2 rounded-md"
+                    >
+                        <WandIcon /> Все
+                    </button>
+                )}
             </div>
             <ul className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar pr-2">
                 {issues.map(issue => (
@@ -65,7 +69,14 @@ const AnalysisSection: React.FC<{
                         >
                           {issue.text || 'Пустая строка'}
                         </span>
-                        {!structuralIssues.includes(issueType) && (
+                        {issueType === 'tags' ? (
+                            <button
+                                onClick={onShowTagsWarning}
+                                className="text-xs text-amber-400 hover:text-amber-300 shrink-0"
+                            >
+                                Исправьте
+                            </button>
+                        ) : !structuralIssues.includes(issueType) && (
                              <button
                                 onClick={() => onFixIssue(issue.lineId, issue.type)}
                                 className="text-xs text-emerald-400 hover:text-emerald-300 shrink-0"
@@ -83,6 +94,7 @@ const AnalysisSection: React.FC<{
 const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onGoToIssue, onFixIssue, onFixAll, onTextChange }) => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
 
   const analysisResults = useMemo(() => analyzeText(lines), [lines]);
   const totalIssues = useMemo(() => Object.values(analysisResults).reduce((acc, issues) => acc + issues.length, 0), [analysisResults]);
@@ -150,6 +162,7 @@ const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onG
                 onGoToIssue={onGoToIssue}
                 onFixIssue={onFixIssue}
                 onFixAll={onFixAll}
+                onShowTagsWarning={() => setIsTagsModalOpen(true)}
             />
         ));
     }
@@ -162,30 +175,50 @@ const FormattingHelper: React.FC<FormattingHelperProps> = ({ lines, onClose, onG
   }
 
   return (
-    <aside className="w-full max-w-sm flex-shrink-0 bg-black/30 backdrop-blur-md border border-white/10 rounded-lg p-1 flex flex-col gap-4 h-full">
-      <header className="flex items-center justify-between p-3 border-b border-white/10 flex-shrink-0">
-        <h3 className="text-lg font-semibold text-white">Помощник</h3>
-        <button onClick={onClose} className="text-gray-300 hover:text-white">
-          <CloseIcon />
-        </button>
-      </header>
-      <div className="flex-grow overflow-y-auto space-y-4 px-3 pb-3 custom-scrollbar">
-        <div className="bg-black/20 p-4 rounded-lg">
-            <h4 className="font-bold text-base text-[#FF553E] mb-2">AI Помощник</h4>
-            <p className="text-xs text-gray-300 mb-3">Автоматическое исправление грамматики, пунктуации и заглавных букв во всём тексте.</p>
-             <button
-                onClick={handleAiFix}
-                disabled={isAiLoading || isTextEmpty}
-                className="w-full flex items-center justify-center gap-2 bg-[#FF553E] hover:bg-[#ff7b6b] disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-            >
-                <WandIcon />
-                <span>{isAiLoading ? 'Обработка...' : 'Улучшить весь текст'}</span>
-            </button>
-            {aiError && <p className="text-xs text-red-400 mt-2 text-center">{aiError}</p>}
+    <>
+      <aside className="w-full max-w-sm flex-shrink-0 bg-black/30 backdrop-blur-md border border-white/10 rounded-lg p-1 flex flex-col gap-4 h-full">
+        <header className="flex items-center justify-between p-3 border-b border-white/10 flex-shrink-0">
+          <h3 className="text-lg font-semibold text-white">Помощник</h3>
+          <button onClick={onClose} className="text-gray-300 hover:text-white">
+            <CloseIcon />
+          </button>
+        </header>
+        <div className="flex-grow overflow-y-auto space-y-4 px-3 pb-3 custom-scrollbar">
+          <div className="bg-black/20 p-4 rounded-lg">
+              <h4 className="font-bold text-base text-[#FF553E] mb-2">AI Помощник</h4>
+              <p className="text-xs text-gray-300 mb-3">Автоматическое исправление грамматики, пунктуации и заглавных букв во всём тексте.</p>
+               <button
+                  onClick={handleAiFix}
+                  disabled={isAiLoading || isTextEmpty}
+                  className="w-full flex items-center justify-center gap-2 bg-[#FF553E] hover:bg-[#ff7b6b] disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+              >
+                  <WandIcon />
+                  <span>{isAiLoading ? 'Обработка...' : 'Улучшить весь текст'}</span>
+              </button>
+              {aiError && <p className="text-xs text-red-400 mt-2 text-center">{aiError}</p>}
+          </div>
+          {renderBody()}
         </div>
-        {renderBody()}
-      </div>
-    </aside>
+      </aside>
+      <Modal
+          isOpen={isTagsModalOpen}
+          onClose={() => setIsTagsModalOpen(false)}
+          title="Замена специальных символов"
+          confirmText="Принято"
+          onConfirm={() => setIsTagsModalOpen(false)}
+          cancelText={null}
+      >
+          <div className="text-sm text-gray-300 space-y-2">
+            <p>Пожалуйста, замените специальные символы вручную, следуя правилам:</p>
+            <ul className="list-disc list-inside pl-2">
+                <li>Вместо <strong>*</strong> напишите полное слово. Если слово зацензурено в аудио, используйте дефис <strong>-</strong>.</li>
+                <li>Вместо <strong>+</strong> напишите "плюс".</li>
+                <li>Избегайте использования <strong>/</strong>, <strong>%</strong>, <strong>&</strong>, <strong>№</strong>, <strong>@</strong>. Заменяйте их словами или перефразируйте предложение.</li>
+                <li>Вместо <strong>#</strong> пишите конструкцией <strong>хештег — ""</strong>, если хештег не произносится — просто уберите его.</li>
+            </ul>
+          </div>
+      </Modal>
+    </>
   );
 };
 
