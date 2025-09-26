@@ -27,17 +27,3 @@ export interface AnalysisResult {
   [key: string]: AnalysisIssue[];
 }
 
-export enum Role {
-  User = 'user',
-  Admin = 'admin',
-  Curator = 'curator',
-}
-
-export interface User {
-  uid: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  role: Role;
-  photoURL: string | null;
-}

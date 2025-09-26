@@ -40,15 +40,9 @@ const tabConfig: { id: Tab; label: string }[] = [
   { id: Tab.Sync, label: '3. Синхронизация' },
   { id: Tab.Result, label: '4. Результат' },
   { id: Tab.Player, label: '5. Предпросмотр' },
-  { id: Tab.Admin, label: 'Админ' },
 ];
 
 const visibleTabs = computed(() => {
-  return tabConfig.filter(tab => {
-    if (tab.id === Tab.Admin) {
-      return props.isAdmin;
-    }
-    return true;
-  });
+ return tabConfig;
 });
 </script>
