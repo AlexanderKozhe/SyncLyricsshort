@@ -43,7 +43,7 @@
       <ul class="list-disc list-inside pl-2">
         <li>Вместо <strong>*</strong> напишите полное слово. Если слово зацензурено в аудио, используйте дефис <strong>-</strong>.</li>
         <li>Вместо <strong>+</strong> напишите "плюс".</li>
-        <li>Избегайте использования <strong>/</strong>, <strong>%</strong>, <strong>&</strong>, <strong>№</strong>, <strong>@</strong>. Заменяйте их словами или перефразируйте предложение.</li>
+        <li>Избегайте использования <strong>/</strong>, <strong>%</strong>, <strong>&</strong>, <strong>№</strong>, <strong>@</strong>. Заменяйте их словами.</li>
         <li>Вместо <strong>#</strong> пишите конструкцией <strong>хештег — ""</strong>, если хештег не произносится — просто уберите его.</li>
       </ul>
     </div>

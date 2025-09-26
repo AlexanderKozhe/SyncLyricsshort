@@ -31,7 +31,27 @@
       </div>
     </main>
 
-    <audio v-if="audioUrl" :src="audioUrl" ref="audioRef" @loadedmetadata="e => audioDuration = e.currentTarget.duration"></audio>
+    <AudioPlayer
+      v-if="audioUrl"
+      :is-playing="isPlaying"
+      :current-time="currentTime"
+      :duration="audioDuration"
+      :playback-rate="playbackRate"
+      @toggle-play-pause="togglePlayPause"
+      @seek="handleSeek"
+      @playback-rate-change="handlePlaybackRateChange"
+    />
+
+    <audio 
+      v-if="audioUrl" 
+      :src="audioUrl" 
+      ref="audioRef"
+      @loadedmetadata="handleLoadedMetadata" 
+      @play="isPlaying = true"
+      @pause="isPlaying = false"
+      @timeupdate="handleTimeUpdate"
+      @durationchange="audioDuration = audioRef ? audioRef.duration : 0"
+    ></audio>
     
     <DraftModal 
       :is-open="isDraftModalOpen" 
@@ -62,6 +82,7 @@ import FormattingHelper from './components/FormattingHelper.vue';
 import Modal from './components/Modal.vue';
 import ZionLogo from './components/icons/ZionLogo.vue';
 import DraftModal from './components/DraftModal.vue';
+import AudioPlayer from './components/AudioPlayer.vue';
 import { applyFix, applyFixAll } from './services/analysis';
 
 const DRAFT_KEY = 'zion_sync_draft';
@@ -85,6 +106,9 @@ const noAudioMode = ref(false);
 const activeIndex = ref(0);
 const isDraftModalOpen = ref(false);
 const draftData = ref<DraftData | null>(null);
+const isPlaying = ref(false);
+const currentTime = ref(0);
+const playbackRate = ref(1);
 
 const audioRef = ref<HTMLAudioElement | null>(null);
 const textEditorRef = ref<{ scrollToLine: (index: number) => void } | null>(null);
@@ -277,6 +301,41 @@ const setLines = (newLines: SyncedLine[]) => {
 
 const setActiveIndex = (index: number) => {
   activeIndex.value = index;
+};
+
+const handleLoadedMetadata = () => {
+  if (audioRef.value) {
+    audioDuration.value = audioRef.value.duration;
+  }
+};
+
+const handleTimeUpdate = () => {
+  if (audioRef.value) {
+    currentTime.value = audioRef.value.currentTime;
+  }
+};
+
+const togglePlayPause = () => {
+  if (audioRef.value) {
+    if (isPlaying.value) {
+      audioRef.value.pause();
+    } else {
+      audioRef.value.play();
+    }
+  }
+};
+
+const handleSeek = (time: number) => {
+  if (audioRef.value) {
+    audioRef.value.currentTime = time;
+  }
+};
+
+const handlePlaybackRateChange = (rate: number) => {
+  if (audioRef.value) {
+    audioRef.value.playbackRate = rate;
+    playbackRate.value = rate;
+  }
 };
 
 </script>

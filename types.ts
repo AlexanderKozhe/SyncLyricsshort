@@ -10,10 +10,7 @@ export enum Tab {
   Text = 'text',
   Sync = 'sync',
   Result = 'result',
-  Player = 'player',
-  Admin = 'admin',
-  Profile = 'profile',
-
+  Player = 'player'
 }
 
 export type IssueType = 'doubleSpaces' | 'capitalization' | 'trim' | 'punctuation' | 'symbols' | 'emptyLines' | 'startEmpty' | 'endEmpty' | 'tags';
