@@ -39,7 +39,7 @@ const tabConfig: { id: Tab; label: string }[] = [
   { id: Tab.Text, label: '2. Текст' },
   { id: Tab.Sync, label: '3. Синхронизация' },
   { id: Tab.Result, label: '4. Результат' },
-  { id: Tab.Player, label: '5. Плеер' },
+  { id: Tab.Player, label: '5. Предпросмотр' },
   { id: Tab.Admin, label: 'Админ' },
 ];
 
